@@ -87,6 +87,8 @@ Options:
 ```
 The 'simulation' shows some fake work being done to 'analyze' the data (which can be disabled using -b) and then shows the probabilities requested including some plots if specified.
 ```
+>> roll -vd 5d6 -s 5 sim -pn 2
+
 Establishing secure connection  ||||||||||||||||||||||||||||||||
 
 Secret key accepted. Welcome, Random Name!
@@ -135,23 +137,6 @@ This report was stolen for you by
    '--------------' SSt
 The North American Free Information Society
 
-┌────────────────────────────────────────────────────────────────┐
-│         ⣄⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀                                  37.9│
-│         ⡇       ⢸       ⢸                                      │
-│         ⡇       ⢸       ⢸                                      │
-│         ⡇       ⢸       ⢸                                      │
-│         ⡇       ⢸       ⢸                                      │
-│         ⡇       ⢸       ⢸                                      │
-│         ⡇       ⢸       ⢸                                      │
-│         ⡇       ⢸       ⢸⠉⠉⠉⠉⠉⠉⠉⢹                              │
-│ ⡖⠒⠒⠒⠒⠒⠒⠒⡇       ⢸       ⢸       ⢸                              │
-│ ⡇       ⡇       ⢸       ⢸       ⢸                              │
-│ ⡇       ⡇       ⢸       ⢸       ⢸                              │
-│ ⡇       ⡇       ⢸       ⢸       ⢸⠤⠤⠤⠤⠤⠤⠤⢤                      │
-│ ⡇       ⡇       ⢸       ⢸       ⢸       ⢸⣀⣀⣀⣀⣀⣀⣀⣀⡀             │
-│ ⠁⠈ ⠁⠈ ⠁⠈⠁⠁⠈ ⠁⠈ ⠁⠈ ⠁⠈ ⠁⠈ ⠉⠈ ⠁⠈ ⠁⠈⠈⠁⠈ ⠁⠈ ⠁⠈ ⠁⠈ ⠁⠈ ⠁⠉ ⠁⠈ ⠁⠈ ⠁ 0.0 │
-│ -1.0                                                  6.0      │
-└────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────┐
 │ Probability of success:               53.9095%                 │

@@ -22,54 +22,60 @@ Options:
 ```
 ```
 Dice Format Tutorial
-Specify the number and type of dice in 'x*ndm+c' format. For example five six-sided dice is 5d6.
+Specify the number and type of dice in 'x*ndm+c' format. For
+example five six-sided dice is 5d6.
 
 >> roll -v -d "5d6"
  -->
-2023-01-28 21:04:33.701801549 -07:00
+2023-01-28 21:15:22.082092546 -07:00
 ____________________________________
- d6                     2
- d6                     3
- d6                     5
- d6                     5
  d6                     4
+ d6                     5
+ d6                     2
+ d6                     5
+ d6                     2
 Hits:           0
-Total (+0):     19
+Total (+0):     18
 ____________________________________
 
-Multiple arguments may be listed with spaces by surrounding the dice with quotations: '-d "3d4 6d6..."' Dice arguments may contain a
-constant modifier by using a plus sign at the end of the dice. '2d6+4' Rolls two six-sided dice with a +4 modifier. The modifier may
-be applied to multiple dice using the multiplication operator. '2*1d20+8' rolls two twenty-sided dice and applies a +8 modifier to
-each roll.
+Multiple arguments may be listed with spaces by surrounding
+the dice with quotations: '-d "3d4 6d6..."' Dice arguments
+may contain a constant modifier by using a plus sign at the
+end of the dice. '2d6+4' Rolls two six-sided dice with a +4
+modifier. The modifier may be applied to multiple dice using
+the multiplication operator. '2*1d20+8' rolls two twenty-sided
+dice and applies a +8 modifier to each roll.
 
 >> roll -v -d "2*1d20+8" -s 20
  -->
-2023-01-28 21:04:33.702045997 -07:00
+2023-01-28 21:15:22.082313780 -07:00
 ____________________________________
- d20 (+8)               15
- d20 (+8)               26
-Hits:           1
-Total (+16):    41
+ d20 (+8)               17
+ d20 (+8)               17
+Hits:           0
+Total (+16):    34
 ____________________________________
 
-Arguments may contain a reference to the previous number of 'successes' using the letter 'x'. The dice sequence "2*1d20+8 x*1d8+4"
-rolls a d8 dice with a +4 modifier for every 'success' received on the previous set of twenty-sided dice.
+Arguments may contain a reference to the previous number of
+'successes' using the letter 'x'. The dice sequence "2*1d20+8
+x*1d8+4" rolls a d8 dice with a +4 modifier for every 'success'
+received on the previous set of twenty-sided dice.
 
 >> roll -v -d "3*1d20+8 x*1d8+4" -s 14
  -->
-2023-01-28 21:04:33.702137704 -07:00
+2023-01-28 21:15:22.082407252 -07:00
 ____________________________________
- d20 (+8)               19
  d20 (+8)               21
+ d20 (+8)               14
  d20 (+8)               25
 Hits:           3
-Total (+24):    65
+Total (+24):    60
 ____________________________________
- d8 (+4)                12
- d8 (+4)                11
  d8 (+4)                9
+ d8 (+4)                8
+ d8 (+4)                10
 Hits:           0
-Total (+12):    32
+Total (+12):    27
 ____________________________________
 ```
 #### Showing Dice Statistics

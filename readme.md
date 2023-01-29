@@ -1,7 +1,7 @@
 A simple dice rolling/odd calculating sci-fi ttrpg tool. Of course it will work for any ttrpg, but I themed it on Shadowrun. Now you can continue to use the command line for yet more silly things.
 
-###Usage
-####Rolling Dice
+### Usage
+#### Rolling Dice
 ```
 Usage: roll [OPTIONS] [COMMAND]
 
@@ -72,7 +72,7 @@ Hits:           0
 Total (+12):    32
 ____________________________________
 ```
-####Showing Dice Statistics
+#### Showing Dice Statistics
 ```
 Usage: roll sim [OPTIONS]
 

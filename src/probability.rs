@@ -1,10 +1,10 @@
-use std::{collections::HashMap, ops::{self, MulAssign}, fmt::{Display, Debug}, io::{Stdout}};
+use std::{collections::HashMap, ops::{self, MulAssign}, fmt::{Display, Debug}, io::Stdout};
 
-use crossterm::{style::Stylize};
+use crossterm::style::Stylize;
+use debug::debugln;
 use itertools::Itertools;
-use textplots::{Chart, Plot};
 
-use crate::{roll::DiceGroup, components::{ComponentData, Component, TextBox}};
+use crate::{components::{Component, ComponentData, Hist1D, TextBox}, roll::DiceGroup};
 
 #[derive(Debug)]
 pub struct Polynomial {
@@ -191,13 +191,12 @@ impl Probability for Total {
     }
 
     fn get_probability_of_gt(&self, value: u16) -> f64 {
-        let mut total = 0.0;
-        for i in self.polynomial.get_coefficients().keys().sorted() {
-            if *i >= value {
-                total += self.get_probability_of(*i);
-            }
-        }
-        total
+        self.polynomial
+            .get_coefficients()
+            .keys()
+            .sorted() // TODO: This 'sorted' may be unnecesary
+            .filter(|i| **i >= value)
+            .fold(0.0, |total, i| total + self.get_probability_of(*i))
     }
 
     fn to_data(&self) -> Vec<(f32, f32)> {
@@ -213,16 +212,18 @@ impl Probability for Total {
 impl Component for TotalGraph {
     fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
         let data = self.total.to_data();
-        let text = Chart::new_with_y_range((self.get_width() as u32 - 8) * 2,  
-                                        Self::to_chart_height(self.get_height()), 
-                                        data[0].0/* - 1.*/, 
-                                        data[data.len() - 1].0 + 1., 
-                                        0., 
-                                        data.get_max() * 1.15)
-            .lineplot(&textplots::Shape::Bars(data.as_slice()))
-            .to_string();
-        let databox = TextBox::new(self.component.clone(), text, self.show_border);
-        databox.draw(stdout)?;
+        debugln!("Data: {:?}", data);
+        let text = Hist1D::new(data.len() as u16, (0., data.len() as f32), self.component.clone(), true, true);
+        // let text = Chart::new_with_y_range((self.get_width() as u32 - 8) * 2,  
+        //                                 Self::to_chart_height(self.get_height()), 
+        //                                 data[0].0/* - 1.*/, 
+        //                                 data[data.len() - 1].0 + 1., 
+        //                                 0., 
+        //                                 data.get_max() * 1.15)
+        //     .lineplot(&textplots::Shape::Bars(data.as_slice()))
+        //     .to_string();
+        // let databox = TextBox::new(self.component.clone(), text, self.show_border);
+        text.draw(stdout)?;
         Ok(())
     }
 
@@ -331,7 +332,7 @@ impl Probability for Hits {
 
     fn to_data(&self) -> Vec<(f32, f32)> {
         let mut vec = vec![];
-        vec.push((-1., 0.));
+        // vec.push((-1., 0.));
         for entry in self.data.keys().sorted() {
             vec.push((*entry as f32, 100. * self.get_probability_of(*entry) as f32));
         }
@@ -342,16 +343,23 @@ impl Probability for Hits {
 impl Component for HitsGraph {
     fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
         let data = self.hits.to_data();
-        let text = Chart::new_with_y_range((self.get_width() as u32 - 8) * 2,  
-                                        Self::to_chart_height(self.get_height()), 
-                                        data[0].0/* - 1.*/, 
-                                        data[data.len() - 1].0 + 1., 
-                                        0., 
-                                        data.get_max() * 1.15)
-            .lineplot(&textplots::Shape::Bars(data.as_slice()))
-            .to_string();
-        let databox = TextBox::new(self.component.clone(), text, self.show_border);
-        databox.draw(stdout)?;
+        debugln!("Data: {:?}", data);
+        debugln!("Data max: {:?}", data.get_max());
+        // let text = Hist1D::new(data.len() as u16, (0., 32.), self.component.clone(), true, true);
+        // text.draw(stdout)?;
+        data.iter().for_each(|i| println!("{}: {}", i.0, i.1));
+        // let text = Chart::new_with_y_range(
+        //         (self.get_width() as u32 - 8) * 2,  
+        //         Self::to_chart_height(self.get_height()), 
+        //         data[0].0/* - 1.*/, 
+        //         data[data.len() - 1].0 + 1., 
+        //         0., 
+        //         data.get_max() * 1.15)
+        //     .lineplot(&textplots::Shape::Bars(data.as_slice()))
+        //     .to_string();
+        // let databox = TextBox::new(self.component.clone(), text, self.show_border);
+        // databox.draw(stdout)?;
+        // text.draw(stdout)?;
         Ok(())
     }
 

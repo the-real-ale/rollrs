@@ -13,8 +13,8 @@ pub struct ComponentData{
 impl ComponentData{
     pub fn new(x0: u16, y0: u16, width: u16, height: u16) -> Self{
         let new: Self = Self{
-            height: height,
-            width: width,
+            height,
+            width,
             position: (x0, y0)
         };
         new
@@ -23,7 +23,7 @@ impl ComponentData{
 
 impl Clone for ComponentData {
     fn clone(&self) -> Self {
-        Self { height: self.height.clone(), width: self.width.clone(), position: self.position.clone() }
+        Self { height: self.height, width: self.width, position: self.position }
     }
 }
 

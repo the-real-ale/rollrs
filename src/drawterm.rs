@@ -129,27 +129,27 @@ pub fn get_width() -> u16 {
 
 pub fn scroll(height: u16) -> Result<()> {
     for _ in 0..height {
-        println!("");
+        println!();
     }
     Ok(())
 }
 
 pub fn get_vertical_fraction(normalize: f32) -> char {
     if normalize < 0.125 {
-        return ' ';
-    } else if normalize >= 0.125 && normalize < 0.25 {
+        ' '
+    } else if (0.125..0.25).contains(&normalize) {
         return '▁';
-    } else if normalize >= 0.25 && normalize < 0.375 {
+    } else if (0.25..0.375).contains(&normalize) {
         return '▂';
-    } else if normalize >= 0.375 && normalize < 0.5 {
+    } else if (0.375..0.5).contains(&normalize) {
         return '▃';
-    } else if normalize >= 0.5 && normalize < 0.625 {
+    } else if (0.5..0.625).contains(&normalize) {
         return '▄';
-    } else if normalize >= 0.625 && normalize < 0.75 {
+    } else if (0.625..0.75).contains(&normalize) {
         return '▅';
-    } else if normalize >= 0.75 && normalize < 0.875 {
+    } else if (0.75..0.875).contains(&normalize) {
         return '▆';
-    } else if normalize >= 0.875 && normalize < 0.9315 {
+    } else if (0.875..0.9315).contains(&normalize) {
         return '▇';
     } else {
         return '█';
@@ -158,20 +158,20 @@ pub fn get_vertical_fraction(normalize: f32) -> char {
 
 pub fn get_horizontal_fraction(normalize: f32) -> char {
     if normalize < 0.125 {
-        return ' ';
-    } else if normalize >= 0.125 && normalize < 0.25 {
+        ' '
+    } else if (0.125..0.25).contains(&normalize) {
         return '▏';
-    } else if normalize >= 0.25 && normalize < 0.375 {
+    } else if (0.25..0.375).contains(&normalize) {
         return '▎';
-    } else if normalize >= 0.375 && normalize < 0.5 {
+    } else if (0.375..0.5).contains(&normalize) {
         return '▍';
-    } else if normalize >= 0.5 && normalize < 0.625 {
+    } else if (0.5..0.625).contains(&normalize) {
         return '▌';
-    } else if normalize >= 0.625 && normalize < 0.75 {
+    } else if (0.625..0.75).contains(&normalize) {
         return '▋';
-    } else if normalize >= 0.75 && normalize < 0.875 {
+    } else if (0.75..0.875).contains(&normalize) {
         return '▊';
-    } else if normalize >= 0.875 && normalize < 0.9315 {
+    } else if (0.875..0.9315).contains(&normalize) {
         return '▉';
     } else {
         return '█';

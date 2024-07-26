@@ -292,7 +292,7 @@ impl Hits {
         let n = dice.get_count();
         for x in 0..=dice.get_count() {
             let mut coeff: f64 = 1.;
-            let value: f64;
+            
             for i in dice.get_count() - x + 1 ..= dice.get_count() {
                 coeff *= i as f64;
             }
@@ -302,7 +302,7 @@ impl Hits {
 
             let dice_factor = ((sides - success_sides) as f64 / sides as f64).powi(n as i32 - x as i32);
             let succ_factor = (success_sides as f64 / sides as f64).powi(x as i32);
-            value = coeff * succ_factor * dice_factor;
+            let value: f64 = coeff * succ_factor * dice_factor;
             data.insert(x, value);
         }
         data
@@ -391,8 +391,8 @@ impl SummaryDisplay {
         let hits = hitnum.unwrap_or(u16::MAX);
         let total = totalnum.unwrap_or(u16::MAX);
         let mut newcomponent = component.clone();
-        let hitsummary = Hits::from_dice(&dice);
-        let totalsummary = Total::from_dice(&dice);
+        let hitsummary = Hits::from_dice(dice);
+        let totalsummary = Total::from_dice(dice);
         let glitchdice = DiceGroup::new(dice.dice.clone(), dice.get_sides().unwrap_or(u16::MAX));
         let glitchsummary = Hits::from_dice(&glitchdice);
         let successchance_hit = hitsummary.get_probability_of_gt(hits);

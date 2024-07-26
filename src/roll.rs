@@ -1,6 +1,5 @@
 use std::{ops, fmt::Display};
 use crossterm::style;
-use rand;
 
 use crate::drawterm;
 
@@ -45,12 +44,12 @@ impl Result {
 
 impl Clone for Result {
     fn clone(&self) -> Self {
-        Self { critfail: self.critfail.clone(), 
-            crit: self.crit.clone(),
-            hit: self.hit.clone(), 
-            value: self.value.clone(), 
-            sides: self.sides.clone(),
-            modifier: self.modifier.clone() }
+        Self { critfail: self.critfail, 
+            crit: self.crit,
+            hit: self.hit, 
+            value: self.value, 
+            sides: self.sides,
+            modifier: self.modifier }
     }
 }
 
@@ -113,7 +112,7 @@ impl Summary {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     pub fn print(&self, verbose : bool) {
@@ -177,10 +176,10 @@ impl Clone for Summary {
     fn clone(&self) -> Self {
         Self { summaries: self.summaries.clone(), 
             results: self.results.clone(), 
-            hits: self.hits.clone(), 
-            crits: self.crits.clone(), 
-            total: self.total.clone(), 
-            total_modifier: self.total_modifier.clone() }
+            hits: self.hits, 
+            crits: self.crits, 
+            total: self.total, 
+            total_modifier: self.total_modifier }
     }
 }
 
@@ -228,7 +227,7 @@ impl Die {
 
 impl Clone for Die {
     fn clone(&self) -> Self {
-        Self { crit: self.crit.clone(), sides: self.sides.clone(), modifier: self.modifier.clone() }
+        Self { crit: self.crit, sides: self.sides, modifier: self.modifier }
     }
 }
 
@@ -249,7 +248,7 @@ impl DiceGroup {
     }
 
     pub fn from_previous(dice_args: &String, default: u16, crits: u16, hit: u16, no_shitty_crit: bool) -> Option<Self> {
-        let new_args = dice_args.replace("x", &default.to_string());
+        let new_args = dice_args.replace('x', &default.to_string());
         Self::from(&new_args, crits, hit, no_shitty_crit)
     }
 
@@ -306,12 +305,12 @@ impl DiceGroup {
 
     pub fn get_sides(&self) -> Option<u16> {
         let default = Die::default();
-        let mut temp = self.dice.get(0).unwrap_or(&default);
+        let mut temp = self.dice.first().unwrap_or(&default);
         for die in &self.dice {
             if die.sides != temp.sides {
                 return Option::None;
             }
-            temp = &die;
+            temp = die;
         }
         Option::Some(temp.sides)
     }
@@ -327,7 +326,7 @@ impl DiceGroup {
 
 impl Clone for DiceGroup {
     fn clone(&self) -> Self {
-        Self { dice: self.dice.clone(), hit: self.hit.clone() }
+        Self { dice: self.dice.clone(), hit: self.hit }
     }
 }
 
@@ -335,7 +334,7 @@ fn fill_dice(dice: u16, side: &str, crit: bool, dice_vec: &mut Vec<Die>) {
     let mut modifier = 0;
     let sides;
 
-    if side.contains("+") {
+    if side.contains('+') {
         let mut plus_split = side.split('+');
         sides = plus_split.next().unwrap_or("1").parse::<u16>().unwrap_or(1);
         modifier = plus_split.next().unwrap_or("0").parse::<u16>().unwrap_or(0);

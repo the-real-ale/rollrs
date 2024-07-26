@@ -124,11 +124,9 @@ fn roll(dice: &String, previous: &mut Summary, success: u16, no_shitty_crits: bo
 }
 
 fn show_dice_warning(){
-    println!("\n{} {}\n\t{}\n\n{}\n", 
+    println!("\n{} The following suggested arguments were not provided:\n\t{}\n\nThe dice roller has no dice to roll...\n", 
         "warning:".bold().dark_yellow(),
-        "The following suggested arguments were not provided:",
-        "--dice <Dice>".green(),
-        "The dice roller has no dice to roll..."
+        "--dice <Dice>".green()
     )
 }
 

@@ -52,7 +52,7 @@ impl Address {
         if self.index == u8::MAX {
             self.index = 0
         }
-        let result = *self.addrs.get(self.index as usize % Self::size() as usize).unwrap();
+        let result = *self.addrs.get(self.index as usize % Self::size()).unwrap();
         self.index += 1;
         result
     }
@@ -64,7 +64,7 @@ fn print_status_checks(checks: &[String]){
         let millis = rand::random::<u16>() % 1000;
         let delay = time::Duration::from_millis(millis as u64);
         drawterm::print(check.to_string());
-        print_buffer(len, &check);
+        print_buffer(len, check);
         thread::sleep(delay);
         if rand::random::<u8>() % 100 < 90 {
             drawterm::print_green("Ok".to_string());
@@ -95,7 +95,7 @@ fn print_check(check: &String, len: usize) {
 fn print_buffer(len: usize, check: &String) {
     let mut buffer: String = "  ".to_string();
     for _ in 0..len - check.len() {
-        buffer = buffer + " ";
+        buffer += " ";
     }
     drawterm::print(buffer);
 }
@@ -111,7 +111,7 @@ fn print_bar(barsize: u16) {
 
 fn print_name(){
     let delay = time::Duration::from_millis(500);
-    println!("");
+    println!();
     println!("Secret key accepted. Welcome, {}!", name::random().bold().underlined());
     thread::sleep(delay);
 }
@@ -119,7 +119,7 @@ fn print_name(){
 fn print_signature(){
     let delay = time::Duration::from_millis(1000);
     let sig = "The North American Free Information Society";
-    println!("");
+    println!();
     println!("This report was stolen for you by");
     println!(
 "         ,-.
@@ -141,7 +141,7 @@ fn print_signature(){
    '--------------' SSt"
     );
     println!("{}", sig.bold().underlined());
-    println!("");
+    println!();
     thread::sleep(delay);
 }
 
@@ -151,7 +151,7 @@ fn print_qeh_link() -> Address{
     let now = chrono::Utc::now();
     let later = now.checked_add_months(chrono::Months::new(52 * 12)).unwrap_or(now);
     let format = later.format("%m/%d/%Y %H:%M UTC ");
-    println!("");
+    println!();
     thread::sleep(delay);
     println!("\t<<<<< QEH Signal Established >>>>>");
     thread::sleep(delay);
@@ -167,7 +167,7 @@ fn print_qeh_break(addr: &mut Address) {
     let delay = time::Duration::from_millis(200);
     let later = now.checked_add_months(chrono::Months::new(52 * 12)).unwrap_or(now);
     let format = later.format("%m/%d/%Y %H:%M UTC ");
-    println!("");
+    println!();
     thread::sleep(delay);
     println!("\t<<<<< QEH Signal Invalid/Missing >>>>>");
     thread::sleep(delay);

@@ -1,20 +1,34 @@
-use std::{ops, fmt::Display};
 use crossterm::style;
+use std::{fmt::Display, ops};
 
 use crate::drawterm;
 
 pub struct Result {
-    critfail : bool,
-    crit : bool,
-    hit : bool,
-    value : u16,
-    sides : u16,
-    modifier : u16, 
+    critfail: bool,
+    crit: bool,
+    hit: bool,
+    value: u16,
+    sides: u16,
+    modifier: u16,
 }
 
 impl Result {
-    pub fn new(critfail: bool, crit: bool, hit: bool, value: u16, sides: u16, modifier: u16) -> Self {
-        Self{ critfail, crit, hit, value, sides, modifier}
+    pub fn new(
+        critfail: bool,
+        crit: bool,
+        hit: bool,
+        value: u16,
+        sides: u16,
+        modifier: u16,
+    ) -> Self {
+        Self {
+            critfail,
+            crit,
+            hit,
+            value,
+            sides,
+            modifier,
+        }
     }
 
     pub fn get_crit_fail(&self) -> bool {
@@ -24,11 +38,11 @@ impl Result {
     pub fn get_crit(&self) -> bool {
         self.crit
     }
-    
+
     pub fn get_hit(&self) -> bool {
         self.hit
     }
-    
+
     pub fn get_value(&self) -> u16 {
         self.value
     }
@@ -44,37 +58,39 @@ impl Result {
 
 impl Clone for Result {
     fn clone(&self) -> Self {
-        Self { critfail: self.critfail, 
+        Self {
+            critfail: self.critfail,
             crit: self.crit,
-            hit: self.hit, 
-            value: self.value, 
+            hit: self.hit,
+            value: self.value,
             sides: self.sides,
-            modifier: self.modifier }
+            modifier: self.modifier,
+        }
     }
 }
 
 pub struct Summary {
-    summaries : Vec<Summary>,
-    results : Vec<Result>,
-    hits : u16,
-    crits : u16,
-    total : u16,
-    total_modifier : u16,
+    summaries: Vec<Summary>,
+    results: Vec<Result>,
+    hits: u16,
+    crits: u16,
+    total: u16,
+    total_modifier: u16,
 }
 
 impl Summary {
     pub fn new() -> Self {
-        Self { 
+        Self {
             summaries: vec![],
-            results: vec![], 
-            hits: 0, 
+            results: vec![],
+            hits: 0,
             crits: 0,
             total: 0,
             total_modifier: 0,
         }
     }
 
-    pub fn add_result(&mut self, result : Result) {
+    pub fn add_result(&mut self, result: Result) {
         self.hits += if result.get_hit() { 1 } else { 0 };
         self.crits += if result.get_crit() { 1 } else { 0 };
         self.total += result.get_value();
@@ -115,18 +131,22 @@ impl Summary {
         false
     }
 
-    pub fn print(&self, verbose : bool) {
+    pub fn print(&self, verbose: bool) {
         if self.get_results().is_empty() && !self.summaries.is_empty() {
             println!("{}", chrono::Local::now());
             println!("____________________________________")
-        }
-        else if self.get_results().is_empty() {
+        } else if self.get_results().is_empty() {
             println!("____________________________________")
-        }
-        else {
-            if verbose {self.print_dice()};
+        } else {
+            if verbose {
+                self.print_dice()
+            };
             println!("Hits:\t\t{}", self.get_hits());
-            println!("Total (+{}):\t{}", self.get_total_modifier(), self.get_total());
+            println!(
+                "Total (+{}):\t{}",
+                self.get_total_modifier(),
+                self.get_total()
+            );
             self.print_glitch();
             println!("____________________________________")
         }
@@ -135,37 +155,33 @@ impl Summary {
         }
     }
 
-    fn print_dice(&self){
+    fn print_dice(&self) {
         for result in self.get_results() {
             if result.get_modifier() != 0 {
                 print!(" d{} (+{})\t", result.get_sides(), result.get_modifier());
-            }
-            else {
+            } else {
                 print!(" d{}\t\t", result.get_sides());
             }
             drawterm::print("\t".to_string());
             if result.get_hit() && !result.get_crit() {
                 drawterm::print_green(result.get_value().to_string());
-            }
-            else if result.get_crit() {
-                drawterm::print_color(result.get_value().to_string(), style::Color::DarkYellow).unwrap();
-            }
-            else if result.critfail {
+            } else if result.get_crit() {
+                drawterm::print_color(result.get_value().to_string(), style::Color::DarkYellow)
+                    .unwrap();
+            } else if result.critfail {
                 drawterm::print_red(result.get_value().to_string());
-            }
-            else {
+            } else {
                 drawterm::print(result.get_value().to_string());
             }
             drawterm::print("\n".to_string());
         }
     }
 
-    fn print_glitch(&self){
+    fn print_glitch(&self) {
         if self.get_glitch() {
             if self.get_hits() == 0 {
                 drawterm::print_red("Critical glitch!\n".to_string());
-            }
-            else {
+            } else {
                 drawterm::print_color("Glitch!\n".to_string(), style::Color::DarkYellow).unwrap();
             }
         }
@@ -174,12 +190,14 @@ impl Summary {
 
 impl Clone for Summary {
     fn clone(&self) -> Self {
-        Self { summaries: self.summaries.clone(), 
-            results: self.results.clone(), 
-            hits: self.hits, 
-            crits: self.crits, 
-            total: self.total, 
-            total_modifier: self.total_modifier }
+        Self {
+            summaries: self.summaries.clone(),
+            results: self.results.clone(),
+            hits: self.hits,
+            crits: self.crits,
+            total: self.total,
+            total_modifier: self.total_modifier,
+        }
     }
 }
 
@@ -207,9 +225,9 @@ impl Display for Summary {
 }
 
 pub struct Die {
-    crit : bool,
-    sides : u16,
-    modifier : u16,
+    crit: bool,
+    sides: u16,
+    modifier: u16,
 }
 
 impl Die {
@@ -217,8 +235,7 @@ impl Die {
         let num;
         if self.crit && nsc {
             num = self.modifier + self.sides;
-        }
-        else {
+        } else {
             num = 1 + self.modifier + rand::random::<u16>() % self.sides;
         }
         num
@@ -227,27 +244,41 @@ impl Die {
 
 impl Clone for Die {
     fn clone(&self) -> Self {
-        Self { crit: self.crit, sides: self.sides, modifier: self.modifier }
+        Self {
+            crit: self.crit,
+            sides: self.sides,
+            modifier: self.modifier,
+        }
     }
 }
 
 impl Default for Die {
     fn default() -> Self {
-        Self {crit: false, sides: 1, modifier: 0}
+        Self {
+            crit: false,
+            sides: 1,
+            modifier: 0,
+        }
     }
 }
 
 pub struct DiceGroup {
-    pub dice : Vec<Die>,
+    pub dice: Vec<Die>,
     hit: u16,
 }
 
 impl DiceGroup {
     pub fn new(dice: Vec<Die>, hit: u16) -> Self {
-        Self {dice, hit}
+        Self { dice, hit }
     }
 
-    pub fn from_previous(dice_args: &String, default: u16, crits: u16, hit: u16, no_shitty_crit: bool) -> Option<Self> {
+    pub fn from_previous(
+        dice_args: &String,
+        default: u16,
+        crits: u16,
+        hit: u16,
+        no_shitty_crit: bool,
+    ) -> Option<Self> {
         let new_args = dice_args.replace('x', &default.to_string());
         Self::from(&new_args, crits, hit, no_shitty_crit)
     }
@@ -261,7 +292,11 @@ impl DiceGroup {
 
         if dice_args.contains('*') {
             let mut multiple_split = dice_args.split('*');
-            let mut rolls = multiple_split.next().unwrap_or("1").parse::<u16>().unwrap_or(1);
+            let mut rolls = multiple_split
+                .next()
+                .unwrap_or("1")
+                .parse::<u16>()
+                .unwrap_or(1);
             let mut d_split = multiple_split.next().unwrap().split('d');
             let dice = d_split.next().unwrap_or("0").parse::<u16>().unwrap_or(0);
             let side = d_split.next().unwrap_or("1");
@@ -275,14 +310,13 @@ impl DiceGroup {
             for _ in 0..crits {
                 fill_dice(dice, side, true, &mut dice_vec);
             }
-        }
-        else {
+        } else {
             let mut d_split = dice_args.split('d');
             let mut rolls = 1;
             let dice = d_split.next().unwrap_or("0").parse::<u16>().unwrap_or(0);
             let side = d_split.next().unwrap_or("1");
             if no_shitty_crit {
-                rolls -= if crits > 0 {rolls} else {0};
+                rolls -= if crits > 0 { rolls } else { 0 };
                 crits *= 2;
             }
             for _ in 0..rolls {
@@ -326,7 +360,10 @@ impl DiceGroup {
 
 impl Clone for DiceGroup {
     fn clone(&self) -> Self {
-        Self { dice: self.dice.clone(), hit: self.hit }
+        Self {
+            dice: self.dice.clone(),
+            hit: self.hit,
+        }
     }
 }
 
@@ -338,38 +375,49 @@ fn fill_dice(dice: u16, side: &str, crit: bool, dice_vec: &mut Vec<Die>) {
         let mut plus_split = side.split('+');
         sides = plus_split.next().unwrap_or("1").parse::<u16>().unwrap_or(1);
         modifier = plus_split.next().unwrap_or("0").parse::<u16>().unwrap_or(0);
-    }
-    else {
+    } else {
         sides = side.parse::<u16>().unwrap_or(1);
     }
 
-
     for _ in 0..dice {
-        dice_vec.push(Die {crit, sides, modifier});
+        dice_vec.push(Die {
+            crit,
+            sides,
+            modifier,
+        });
         modifier = 0;
     }
 }
 
 impl Default for DiceGroup {
     fn default() -> Self {
-        Self { dice: vec![], hit: u16::MAX }
+        Self {
+            dice: vec![],
+            hit: u16::MAX,
+        }
     }
 }
 
 pub struct Roller {
-    dice : DiceGroup,
+    dice: DiceGroup,
     critval: u16,
-    success : u16,
-    reroll : u16,
-    summary : Summary,
+    success: u16,
+    reroll: u16,
+    summary: Summary,
 }
 
 impl Roller {
     pub fn from_dice_group(dice: DiceGroup, critval: u16, success: u16, reroll: u16) -> Self {
-        Self {dice, critval, success, reroll, summary: Summary::new()}
+        Self {
+            dice,
+            critval,
+            success,
+            reroll,
+            summary: Summary::new(),
+        }
     }
 
-    pub fn roll(&mut self, nsc: bool){
+    pub fn roll(&mut self, nsc: bool) {
         let mut reroll = self.add_results(&self.dice.dice.to_owned(), nsc);
 
         while !reroll.is_empty() {
@@ -377,7 +425,7 @@ impl Roller {
         }
     }
 
-    fn add_results(&mut self, dice : &Vec<Die>, nsc: bool) -> Vec<Die> {
+    fn add_results(&mut self, dice: &Vec<Die>, nsc: bool) -> Vec<Die> {
         let mut reroll_result = vec![];
         for die in dice {
             let num = die.roll(nsc);
@@ -385,13 +433,19 @@ impl Roller {
             if num >= self.reroll {
                 reroll_result.push(die.clone());
             }
-            self.summary.add_result(
-                Result::new(num == 1, crit, num >= self.success, num, die.sides, die.modifier));
+            self.summary.add_result(Result::new(
+                num == 1,
+                crit,
+                num >= self.success,
+                num,
+                die.sides,
+                die.modifier,
+            ));
         }
         reroll_result
     }
 
-    pub fn get_summary(self) -> Summary{
+    pub fn get_summary(self) -> Summary {
         self.summary
     }
 }

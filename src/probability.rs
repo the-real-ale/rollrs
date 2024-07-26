@@ -4,7 +4,7 @@ use crossterm::style::Stylize;
 use debug::debugln;
 use itertools::Itertools;
 
-use crate::{components::{Component, ComponentData, Hist1D, TextBox}, roll::DiceGroup};
+use crate::{components::{Component, ComponentData, Hist1D, TextBox}, drawterm::get_horizontal_fraction, roll::DiceGroup};
 
 #[derive(Debug)]
 pub struct Polynomial {
@@ -274,6 +274,12 @@ impl HitsGraph {
     fn to_chart_height(rows: u16) -> u32 {
         (rows as u32 - 2) * 4
     }
+
+    fn get_horizontal_bar(value: f32, width: usize) -> Vec<char> {
+        let mut result = vec!['█'; width];
+        result[width] = get_horizontal_fraction(value % (width - 1) as f32);
+        result
+    }
 }
 
 impl Hits {
@@ -345,21 +351,7 @@ impl Component for HitsGraph {
         let data = self.hits.to_data();
         debugln!("Data: {:?}", data);
         debugln!("Data max: {:?}", data.get_max());
-        // let text = Hist1D::new(data.len() as u16, (0., 32.), self.component.clone(), true, true);
-        // text.draw(stdout)?;
-        data.iter().for_each(|i| println!("{}: {}", i.0, i.1));
-        // let text = Chart::new_with_y_range(
-        //         (self.get_width() as u32 - 8) * 2,  
-        //         Self::to_chart_height(self.get_height()), 
-        //         data[0].0/* - 1.*/, 
-        //         data[data.len() - 1].0 + 1., 
-        //         0., 
-        //         data.get_max() * 1.15)
-        //     .lineplot(&textplots::Shape::Bars(data.as_slice()))
-        //     .to_string();
-        // let databox = TextBox::new(self.component.clone(), text, self.show_border);
-        // databox.draw(stdout)?;
-        // text.draw(stdout)?;
+        data.iter().for_each(|i| println!("{}:\t{} {}", i.0, i.1, Self::get_horizontal_bar(i.1, termsize::get().unwrap_or(termsize::Size { rows: 0, cols: 0}).cols.into()).iter().collect::<String>()));
         Ok(())
     }
 

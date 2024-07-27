@@ -1,81 +1,27 @@
-use crossterm::style;
-use std::{fmt::Display, ops};
+use crossterm::style::Stylize;
+use std::{
+    fmt::{Display, Write},
+    ops,
+};
 
-use crate::drawterm;
-
+#[derive(Clone, Copy)]
 pub struct Result {
-    critfail: bool,
-    crit: bool,
-    hit: bool,
-    value: u16,
-    sides: u16,
-    modifier: u16,
+    pub critfail: bool,
+    pub crit: bool,
+    pub hit: bool,
+    pub value: u16,
+    pub sides: u16,
+    pub modifier: u16,
 }
 
-impl Result {
-    pub fn new(
-        critfail: bool,
-        crit: bool,
-        hit: bool,
-        value: u16,
-        sides: u16,
-        modifier: u16,
-    ) -> Self {
-        Self {
-            critfail,
-            crit,
-            hit,
-            value,
-            sides,
-            modifier,
-        }
-    }
-
-    pub fn get_crit_fail(&self) -> bool {
-        self.critfail
-    }
-
-    pub fn get_crit(&self) -> bool {
-        self.crit
-    }
-
-    pub fn get_hit(&self) -> bool {
-        self.hit
-    }
-
-    pub fn get_value(&self) -> u16 {
-        self.value
-    }
-
-    pub fn get_sides(&self) -> u16 {
-        self.sides
-    }
-
-    pub fn get_modifier(&self) -> u16 {
-        self.modifier
-    }
-}
-
-impl Clone for Result {
-    fn clone(&self) -> Self {
-        Self {
-            critfail: self.critfail,
-            crit: self.crit,
-            hit: self.hit,
-            value: self.value,
-            sides: self.sides,
-            modifier: self.modifier,
-        }
-    }
-}
-
+#[derive(Clone)]
 pub struct Summary {
     summaries: Vec<Summary>,
     results: Vec<Result>,
-    hits: u16,
-    crits: u16,
-    total: u16,
-    total_modifier: u16,
+    pub hits: u16,
+    pub crits: u16,
+    pub total: u16,
+    pub total_modifier: u16,
 }
 
 impl Summary {
@@ -91,37 +37,21 @@ impl Summary {
     }
 
     pub fn add_result(&mut self, result: Result) {
-        self.hits += if result.get_hit() { 1 } else { 0 };
-        self.crits += if result.get_crit() { 1 } else { 0 };
-        self.total += result.get_value();
-        self.total_modifier += result.get_modifier();
+        self.hits += if result.hit { 1 } else { 0 };
+        self.crits += if result.crit { 1 } else { 0 };
+        self.total += result.value;
+        self.total_modifier += result.modifier;
         self.results.push(result);
     }
 
-    pub fn get_results(&self) -> &Vec<Result> {
+    pub fn get_results(&self) -> &[Result] {
         &self.results
-    }
-
-    pub fn get_hits(&self) -> u16 {
-        self.hits
-    }
-
-    pub fn get_crits(&self) -> u16 {
-        self.crits
-    }
-
-    pub fn get_total(&self) -> u16 {
-        self.total
-    }
-
-    pub fn get_total_modifier(&self) -> u16 {
-        self.total_modifier
     }
 
     pub fn get_glitch(&self) -> bool {
         let mut fails = 0;
         for result in &self.results {
-            if result.get_crit_fail() {
+            if result.critfail {
                 fails += 1;
             }
             if fails * 2 > self.results.len() {
@@ -131,72 +61,80 @@ impl Summary {
         false
     }
 
-    pub fn print(&self, verbose: bool) {
+    pub fn print(&self, verbose: bool, f: &mut std::fmt::Formatter<'_>) {
         if self.get_results().is_empty() && !self.summaries.is_empty() {
-            println!("{}", chrono::Local::now());
-            println!("____________________________________")
+            f.write_str(format!("{}\n", chrono::Local::now()).as_str())
+                .ok();
+            f.write_str(
+                "____________________________________\n"
+                    .to_string()
+                    .as_str(),
+            )
+            .ok();
         } else if self.get_results().is_empty() {
-            println!("____________________________________")
+            f.write_str(
+                "____________________________________\n"
+                    .to_string()
+                    .as_str(),
+            )
+            .ok();
         } else {
             if verbose {
-                self.print_dice()
+                self.print_dice(f)
             };
-            println!("Hits:\t\t{}", self.get_hits());
-            println!(
-                "Total (+{}):\t{}",
-                self.get_total_modifier(),
-                self.get_total()
-            );
-            self.print_glitch();
-            println!("____________________________________")
+            f.write_str(format!("Hits:\t\t{}\n", self.hits).as_str())
+                .ok();
+            f.write_str(format!("Total (+{}):\t{}\n", self.total_modifier, self.total).as_str())
+                .ok();
+            self.print_glitch(f);
+            f.write_str(
+                "____________________________________\n"
+                    .to_string()
+                    .as_str(),
+            )
+            .ok();
         }
         for summary in &self.summaries {
-            summary.print(verbose);
+            summary.print(verbose, f);
         }
     }
 
-    fn print_dice(&self) {
+    fn print_dice(&self, f: &mut std::fmt::Formatter<'_>) {
         for result in self.get_results() {
-            if result.get_modifier() != 0 {
-                print!(" d{} (+{})\t", result.get_sides(), result.get_modifier());
+            if result.modifier != 0 {
+                f.write_str(format!(" d{} (+{})\t", result.sides, result.modifier).as_str())
+                    .ok();
             } else {
-                print!(" d{}\t\t", result.get_sides());
+                f.write_str(format!(" d{}\t\t", result.sides).as_str()).ok();
             }
-            drawterm::print("\t".to_string());
-            if result.get_hit() && !result.get_crit() {
-                drawterm::print_green(result.get_value().to_string());
-            } else if result.get_crit() {
-                drawterm::print_color(result.get_value().to_string(), style::Color::DarkYellow)
-                    .unwrap();
+            f.write_char('\t').ok();
+            if result.hit && !result.crit {
+                f.write_str(format!("{}", result.value.to_string().green()).as_str())
+                    .ok();
+            } else if result.crit {
+                f.write_str(format!("{}", result.value.to_string().dark_yellow()).as_str())
+                    .ok();
             } else if result.critfail {
-                drawterm::print_red(result.get_value().to_string());
+                f.write_str(format!("{}", result.value.to_string().dark_red()).as_str())
+                    .ok();
             } else {
-                drawterm::print(result.get_value().to_string());
+                f.write_str(format!("{}", result.value).as_str()).ok();
             }
-            drawterm::print("\n".to_string());
+            f.write_char('\n').ok();
         }
     }
 
-    fn print_glitch(&self) {
+    fn print_glitch(&self, f: &mut std::fmt::Formatter<'_>) {
         if self.get_glitch() {
-            if self.get_hits() == 0 {
-                drawterm::print_red("Critical glitch!\n".to_string());
+            if self.hits == 0 {
+                f.write_str(format!("{}", "Critical glitch!\n".dark_red()).as_str())
+                    .ok();
+                // drawterm::print_red("Critical glitch!\n".to_string());
             } else {
-                drawterm::print_color("Glitch!\n".to_string(), style::Color::DarkYellow).unwrap();
+                f.write_str(format!("{}", "Glitch!\n".dark_yellow()).as_str())
+                    .ok();
+                // drawterm::print_color("Glitch!\n".to_string(), style::Color::DarkYellow).unwrap();
             }
-        }
-    }
-}
-
-impl Clone for Summary {
-    fn clone(&self) -> Self {
-        Self {
-            summaries: self.summaries.clone(),
-            results: self.results.clone(),
-            hits: self.hits,
-            crits: self.crits,
-            total: self.total,
-            total_modifier: self.total_modifier,
         }
     }
 }
@@ -218,8 +156,8 @@ impl ops::AddAssign<Summary> for Summary {
 }
 
 impl Display for Summary {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.print(true);
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.print(true, f);
         Ok(())
     }
 }
@@ -232,13 +170,11 @@ pub struct Die {
 
 impl Die {
     pub fn roll(&self, nsc: bool) -> u16 {
-        let num;
         if self.crit && nsc {
-            num = self.modifier + self.sides;
+            self.modifier + self.sides
         } else {
-            num = 1 + self.modifier + rand::random::<u16>() % self.sides;
+            1 + self.modifier + rand::random::<u16>() % self.sides
         }
-        num
     }
 }
 
@@ -433,14 +369,14 @@ impl Roller {
             if num >= self.reroll {
                 reroll_result.push(die.clone());
             }
-            self.summary.add_result(Result::new(
-                num == 1,
+            self.summary.add_result(Result {
+                critfail: num == 1,
                 crit,
-                num >= self.success,
-                num,
-                die.sides,
-                die.modifier,
-            ));
+                hit: num >= self.success,
+                value: num,
+                sides: die.sides,
+                modifier: die.modifier,
+            });
         }
         reroll_result
     }

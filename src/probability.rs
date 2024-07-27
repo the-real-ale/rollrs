@@ -7,15 +7,11 @@ use std::{
 
 use crossterm::{
     queue,
-    style::{PrintStyledContent, ResetColor, Stylize},
+    style::{Print, PrintStyledContent, ResetColor, Stylize},
 };
 use itertools::Itertools;
 
-use crate::{
-    components::{Component, ComponentData, Hist1D, TextBox},
-    drawterm::get_horizontal_fraction,
-    roll::DiceGroup,
-};
+use crate::{components::Component, drawterm::get_horizontal_fraction, roll::DiceGroup};
 
 #[derive(Debug)]
 pub struct Polynomial {
@@ -162,21 +158,12 @@ pub struct Total {
 
 pub struct TotalGraph {
     total: Total,
-    component: ComponentData,
     show_border: bool,
 }
 
 impl TotalGraph {
-    pub fn new(total: Total, component: ComponentData, show_border: bool) -> Self {
-        let mut newcomponent = component.clone();
-        while Self::to_chart_height(newcomponent.height) < 32 {
-            newcomponent.height += 1;
-        }
-        Self {
-            total,
-            component: newcomponent,
-            show_border,
-        }
+    pub fn new(total: Total, show_border: bool) -> Self {
+        Self { total, show_border }
     }
 
     fn to_chart_height(rows: u16) -> u32 {
@@ -238,49 +225,7 @@ impl Probability for Total {
 
 impl Component for TotalGraph {
     fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
-        let data = self.total.to_data();
-        let text = Hist1D::new(
-            data.len() as u16,
-            (0., data.len() as f32),
-            self.component.clone(),
-            true,
-            true,
-        );
-        // let text = Chart::new_with_y_range((self.get_width() as u32 - 8) * 2,
-        //                                 Self::to_chart_height(self.get_height()),
-        //                                 data[0].0/* - 1.*/,
-        //                                 data[data.len() - 1].0 + 1.,
-        //                                 0.,
-        //                                 data.get_max() * 1.15)
-        //     .lineplot(&textplots::Shape::Bars(data.as_slice()))
-        //     .to_string();
-        // let databox = TextBox::new(self.component.clone(), text, self.show_border);
-        text.draw(stdout)?;
-        Ok(())
-    }
-
-    fn get_width(&self) -> u16 {
-        self.component.width
-    }
-
-    fn get_height(&self) -> u16 {
-        self.component.height
-    }
-
-    fn get_position(&self) -> (u16, u16) {
-        self.component.position
-    }
-
-    fn set_width(&mut self, width: u16) {
-        self.component.width = width;
-    }
-
-    fn set_height(&mut self, height: u16) {
-        self.component.height = height;
-    }
-
-    fn set_position(&mut self, pos: (u16, u16)) {
-        self.component.position = pos;
+        todo!()
     }
 }
 
@@ -291,20 +236,14 @@ pub struct Hits {
 pub struct HitsGraph {
     hits: Hits,
     hit: u16,
-    component: ComponentData,
     show_border: bool,
 }
 
 impl HitsGraph {
-    pub fn new(hits: Hits, hit: u16, component: ComponentData, show_border: bool) -> Self {
-        let mut newcomponent = component.clone();
-        while Self::to_chart_height(newcomponent.height) < 32 {
-            newcomponent.height += 1;
-        }
+    pub fn new(hits: Hits, hit: u16, show_border: bool) -> Self {
         Self {
             hits,
             hit,
-            component: newcomponent,
             show_border,
         }
     }
@@ -435,41 +374,15 @@ impl Component for HitsGraph {
             });
         Ok(())
     }
-
-    fn get_width(&self) -> u16 {
-        self.component.width
-    }
-
-    fn get_height(&self) -> u16 {
-        self.component.height
-    }
-
-    fn get_position(&self) -> (u16, u16) {
-        self.component.position
-    }
-
-    fn set_width(&mut self, width: u16) {
-        self.component.width = width;
-    }
-
-    fn set_height(&mut self, height: u16) {
-        self.component.height = height;
-    }
-
-    fn set_position(&mut self, pos: (u16, u16)) {
-        self.component.position = pos;
-    }
 }
 
 pub struct SummaryDisplay {
     text: String,
-    component: ComponentData,
     show_border: bool,
 }
 
 impl SummaryDisplay {
     pub fn new(
-        component: ComponentData,
         dice: &DiceGroup,
         hitnum: Option<u16>,
         totalnum: Option<u16>,
@@ -477,7 +390,6 @@ impl SummaryDisplay {
     ) -> Self {
         let hits = hitnum.unwrap_or(u16::MAX);
         let total = totalnum.unwrap_or(u16::MAX);
-        let mut newcomponent = component.clone();
         let hitsummary = Hits::from_dice(dice);
         let totalsummary = Total::from_dice(dice);
         let glitchdice = DiceGroup::new(dice.dice.clone(), dice.get_sides().unwrap_or(u16::MAX));
@@ -493,8 +405,6 @@ impl SummaryDisplay {
         let critglitch: String = format!("{:7.4}", critglitchchance as f32 * 100.);
         let text: String;
         if hits != u16::MAX && total != u16::MAX {
-            newcomponent.position.1 -= 1;
-            newcomponent.height += 1;
             text = format!("\nProbability of {} total:\t\t{}%\nProbability of {} hits:\t\t{}%\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
                 total,
                 success_total.bold(),
@@ -513,51 +423,20 @@ impl SummaryDisplay {
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red());
         } else {
-            newcomponent.position.1 += 1;
-            newcomponent.height -= 1;
             text = format!(
                 "\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red()
             );
         }
-        Self {
-            text,
-            component: newcomponent,
-            show_border,
-        }
+        Self { text, show_border }
     }
 }
 
 impl Component for SummaryDisplay {
-    fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
-        let databox = TextBox::new(self.component.clone(), self.text.clone(), self.show_border);
-        databox.draw(stdout)?;
+    fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
+        queue!(stdout, Print(self.text.as_str()));
         Ok(())
-    }
-
-    fn get_width(&self) -> u16 {
-        self.component.width
-    }
-
-    fn get_height(&self) -> u16 {
-        self.component.height
-    }
-
-    fn get_position(&self) -> (u16, u16) {
-        self.component.position
-    }
-
-    fn set_width(&mut self, width: u16) {
-        self.component.width = width;
-    }
-
-    fn set_height(&mut self, height: u16) {
-        self.component.height = height;
-    }
-
-    fn set_position(&mut self, pos: (u16, u16)) {
-        self.component.position = pos;
     }
 }
 

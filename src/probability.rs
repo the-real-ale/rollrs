@@ -188,7 +188,6 @@ impl Probability for Total {
         self.polynomial
             .get_coefficients()
             .keys()
-            .sorted() // TODO: This 'sorted' may be unnecesary
             .filter(|i| **i >= value)
             .fold(0.0, |total, i| total + self.get_probability_of(*i))
     }
@@ -384,7 +383,8 @@ impl SummaryDisplay {
         let glitchdice = DiceGroup::new(dice.dice.clone(), dice.get_sides().unwrap_or(u16::MAX));
         let glitchsummary = Hits::from_dice(&glitchdice);
         let successchance_hit = hitsummary.get_probability_of_gt(hits);
-        let successchance_total = totalsummary.get_probability_of_gt(total);
+        let successchance_total =
+            totalsummary.get_probability_of_gt(total - dice.get_total_modifier());
         let glitchchance =
             glitchsummary.get_probability_of_gt((dice.get_count() as f32 / 2.).round() as u16);
         let critglitchchance = (1.0 - successchance_hit) * glitchchance;

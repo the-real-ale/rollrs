@@ -1,7 +1,11 @@
 use std::io::stdout;
 
 use clap::{command, Arg, ArgAction, ArgMatches, Command};
-use crossterm::{execute, style::Stylize, terminal};
+use crossterm::{
+    execute, queue,
+    style::{Print, Stylize},
+    terminal,
+};
 use layout::{plot_dice_hits, plot_dice_totals, show_summary};
 use roll::{DiceGroup, Roller, Summary};
 
@@ -110,7 +114,7 @@ fn run_roll(matches: &ArgMatches) {
         );
     }
 
-    total.print(matches.get_flag("Verbose"));
+    queue!(stdout(), Print(total)).ok();
 }
 
 fn run_demo() {
@@ -130,7 +134,8 @@ fn run_demo() {
         u16::MAX,
         &mut total,
     );
-    total.print(true);
+
+    queue!(stdout(), Print(total)).ok();
     total = Summary::new();
 
     println!("\n{}", wrap(&"Multiple arguments may be listed with spaces by surrounding the dice with quotations: '-d \"3d4 6d6...\"' \
@@ -146,7 +151,7 @@ The modifier may be applied to multiple dice using the multiplication operator. 
         u16::MAX,
         &mut total,
     );
-    total.print(true);
+    queue!(stdout(), Print(total)).ok();
     total = Summary::new();
 
     println!("\n{}", wrap(&"Arguments may contain a reference to the previous number of 'successes' using the letter 'x'. \
@@ -173,7 +178,7 @@ The dice sequence \"2*1d20+8 x*1d8+4\" rolls a d8 dice with a +4 modifier for ev
         u16::MAX,
         &mut total,
     );
-    total.print(true);
+    queue!(stdout(), Print(total)).ok();
 }
 
 fn roll(
@@ -187,8 +192,8 @@ fn roll(
 ) {
     let d = DiceGroup::from_previous(
         dice,
-        previous.get_hits(),
-        previous.get_crits(),
+        previous.hits,
+        previous.crits,
         success,
         no_shitty_crits,
     )
@@ -254,12 +259,6 @@ fn get_matches() -> ArgMatches {
                 .short('q')
                 .long("no-shitty-crits")
                 .help("Change crit behavior to be in line with the popular nsc homebrew rules.")
-                .action(ArgAction::SetTrue)
-        ).arg(
-            Arg::new("Verbose")
-                .short('v')
-                .long("verbose")
-                .help("Show individual dice rolls.")
                 .action(ArgAction::SetTrue)
         ).subcommand(
             Command::new("help-dice")

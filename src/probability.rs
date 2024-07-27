@@ -6,8 +6,8 @@ use std::{
 };
 
 use crossterm::{
-    execute, queue,
-    style::{Print, PrintStyledContent, ResetColor, Stylize},
+    queue,
+    style::{PrintStyledContent, ResetColor, Stylize},
 };
 use itertools::Itertools;
 

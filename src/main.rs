@@ -65,7 +65,7 @@ fn run_sim(matches: &ArgMatches) {
 
         let d = DiceGroup::from(dice, 0, success, matches.get_flag("NSC")).unwrap_or_default();
         if sim_match.get_flag("Show Totals") {
-            plot_dice_totals(&d);
+            plot_dice_totals(&d, numtotal);
         }
         if sim_match.get_flag("Show Hits") {
             plot_dice_hits(&d, numhits);

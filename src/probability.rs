@@ -144,11 +144,9 @@ impl PartialEq<Polynomial> for Polynomial {
 
 pub trait Probability {
     fn from_dice(dice: &DiceGroup) -> Self;
-    fn get_mean(&self) -> u16;
-    fn get_mean_probability(&self) -> f64;
     fn get_probability_of(&self, value: u16) -> f64;
     fn get_probability_of_gt(&self, value: u16) -> f64;
-    fn to_data(&self) -> Vec<(f32, f32)>;
+    fn to_data(&self) -> Vec<(u16, f32)>;
 }
 
 pub struct Total {
@@ -157,17 +155,13 @@ pub struct Total {
 }
 
 pub struct TotalGraph {
-    total: Total,
-    show_border: bool,
+    totals: Total,
+    total: u16,
 }
 
 impl TotalGraph {
-    pub fn new(total: Total, show_border: bool) -> Self {
-        Self { total, show_border }
-    }
-
-    fn to_chart_height(rows: u16) -> u32 {
-        (rows as u32 - 2) * 4
+    pub fn new(totals: Total, total: u16) -> Self {
+        Self { totals, total }
     }
 }
 
@@ -186,14 +180,6 @@ impl Probability for Total {
         }
     }
 
-    fn get_mean(&self) -> u16 {
-        todo!()
-    }
-
-    fn get_mean_probability(&self) -> f64 {
-        todo!()
-    }
-
     fn get_probability_of(&self, value: u16) -> f64 {
         self.polynomial.get_coefficient(value)
     }
@@ -207,25 +193,61 @@ impl Probability for Total {
             .fold(0.0, |total, i| total + self.get_probability_of(*i))
     }
 
-    fn to_data(&self) -> Vec<(f32, f32)> {
-        let mut vec = vec![];
-        vec.push((
-            (self.dice.get_count() + self.dice.get_total_modifier() - 1) as f32,
-            0.,
-        ));
-        for entry in self.polynomial.get_coefficients().keys().sorted() {
-            vec.push((
-                (self.dice.get_total_modifier() + *entry) as f32,
-                100. * self.get_probability_of(*entry) as f32,
-            ));
-        }
-        vec.clone()
+    fn to_data(&self) -> Vec<(u16, f32)> {
+        self.polynomial
+            .get_coefficients()
+            .keys()
+            .sorted()
+            .map(|entry| {
+                (
+                    *entry + self.dice.get_total_modifier(),
+                    100. * self.get_probability_of(*entry) as f32,
+                )
+            })
+            .collect()
     }
 }
 
 impl Component for TotalGraph {
-    fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
-        todo!()
+    fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
+        let data = self.totals.to_data();
+        data.iter()
+            .filter(|i| i.1 > 0.1)
+            .map(|i| {
+                (
+                    i.0,
+                    format!(
+                        "{:>3}:\t{:>5.1} {}\n",
+                        i.0,
+                        i.1,
+                        get_horizontal_bar(
+                            i.1,
+                            Into::<usize>::into(
+                                termsize::get()
+                                    .unwrap_or(termsize::Size { rows: 0, cols: 0 })
+                                    .cols
+                                    / 2
+                            )
+                        )
+                        .iter()
+                        .collect::<String>()
+                    ),
+                )
+            })
+            .map(|(i, s)| {
+                if self.total > 1 && i > self.total {
+                    s.bold().green()
+                } else if self.total > 1 && i == self.total {
+                    s.bold().dark_yellow()
+                } else {
+                    s.reset()
+                }
+            })
+            .for_each(|s| {
+                queue!(stdout, PrintStyledContent(s));
+                queue!(stdout, ResetColor);
+            });
+        Ok(())
     }
 }
 
@@ -236,29 +258,11 @@ pub struct Hits {
 pub struct HitsGraph {
     hits: Hits,
     hit: u16,
-    show_border: bool,
 }
 
 impl HitsGraph {
-    pub fn new(hits: Hits, hit: u16, show_border: bool) -> Self {
-        Self {
-            hits,
-            hit,
-            show_border,
-        }
-    }
-
-    fn to_chart_height(rows: u16) -> u32 {
-        (rows as u32 - 2) * 4
-    }
-
-    fn get_horizontal_bar(value: f32, width: usize) -> Vec<char> {
-        let mut result = vec!['█'; (value * width as f32 / 50f32) as usize];
-        let len = result.len();
-        if len != 0 {
-            result[len - 1] = get_horizontal_fraction(value % 50f32);
-        }
-        result
+    pub fn new(hits: Hits, hit: u16) -> Self {
+        Self { hits, hit }
     }
 }
 
@@ -301,14 +305,6 @@ impl Probability for Hits {
         }
     }
 
-    fn get_mean(&self) -> u16 {
-        todo!()
-    }
-
-    fn get_mean_probability(&self) -> f64 {
-        todo!()
-    }
-
     fn get_probability_of(&self, value: u16) -> f64 {
         *self.data.get(&value).unwrap_or(&0.)
     }
@@ -323,13 +319,12 @@ impl Probability for Hits {
         total
     }
 
-    fn to_data(&self) -> Vec<(f32, f32)> {
-        let mut vec = vec![];
-        // vec.push((-1., 0.));
-        for entry in self.data.keys().sorted() {
-            vec.push((*entry as f32, 100. * self.get_probability_of(*entry) as f32));
-        }
-        vec
+    fn to_data(&self) -> Vec<(u16, f32)> {
+        self.data
+            .keys()
+            .sorted()
+            .map(|entry| (*entry, 100. * self.get_probability_of(*entry) as f32))
+            .collect()
     }
 }
 
@@ -340,12 +335,12 @@ impl Component for HitsGraph {
             .filter(|i| i.1 > 0.1)
             .map(|i| {
                 (
-                    i.0 as u16,
+                    i.0,
                     format!(
                         "{:>3}:\t{:>5.1} {}\n",
                         i.0,
                         i.1,
-                        Self::get_horizontal_bar(
+                        get_horizontal_bar(
                             i.1,
                             Into::<usize>::into(
                                 termsize::get()
@@ -378,16 +373,10 @@ impl Component for HitsGraph {
 
 pub struct SummaryDisplay {
     text: String,
-    show_border: bool,
 }
 
 impl SummaryDisplay {
-    pub fn new(
-        dice: &DiceGroup,
-        hitnum: Option<u16>,
-        totalnum: Option<u16>,
-        show_border: bool,
-    ) -> Self {
+    pub fn new(dice: &DiceGroup, hitnum: Option<u16>, totalnum: Option<u16>) -> Self {
         let hits = hitnum.unwrap_or(u16::MAX);
         let total = totalnum.unwrap_or(u16::MAX);
         let hitsummary = Hits::from_dice(dice);
@@ -429,13 +418,13 @@ impl SummaryDisplay {
                 critglitch.bold().dark_red()
             );
         }
-        Self { text, show_border }
+        Self { text }
     }
 }
 
 impl Component for SummaryDisplay {
     fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
-        queue!(stdout, Print(self.text.as_str()));
+        queue!(stdout, Print(self.text.as_str()))?;
         Ok(())
     }
 }
@@ -465,6 +454,15 @@ impl MinMax<f32> for Vec<(f32, f32)> {
         }
         high
     }
+}
+
+fn get_horizontal_bar(value: f32, width: usize) -> Vec<char> {
+    let mut result = vec!['█'; (value * width as f32 / 50f32) as usize];
+    let len = result.len();
+    if len != 0 {
+        result[len - 1] = get_horizontal_fraction(value % width as f32);
+    }
+    result
 }
 
 #[cfg(test)]

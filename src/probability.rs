@@ -5,7 +5,10 @@ use std::{
     ops::{self, MulAssign},
 };
 
-use crossterm::style::Stylize;
+use crossterm::{
+    execute, queue,
+    style::{Print, PrintStyledContent, ResetColor, Stylize},
+};
 use debug::debugln;
 use itertools::Itertools;
 
@@ -289,18 +292,20 @@ pub struct Hits {
 
 pub struct HitsGraph {
     hits: Hits,
+    hit: u16,
     component: ComponentData,
     show_border: bool,
 }
 
 impl HitsGraph {
-    pub fn new(hits: Hits, component: ComponentData, show_border: bool) -> Self {
+    pub fn new(hits: Hits, hit: u16, component: ComponentData, show_border: bool) -> Self {
         let mut newcomponent = component.clone();
         while Self::to_chart_height(newcomponent.height) < 32 {
             newcomponent.height += 1;
         }
         Self {
             hits,
+            hit,
             component: newcomponent,
             show_border,
         }
@@ -311,8 +316,11 @@ impl HitsGraph {
     }
 
     fn get_horizontal_bar(value: f32, width: usize) -> Vec<char> {
-        let mut result = vec!['█'; width];
-        result[width] = get_horizontal_fraction(value % (width - 1) as f32);
+        let mut result = vec!['█'; (value * width as f32 / 50f32) as usize];
+        let len = result.len();
+        if len != 0 {
+            result[len - 1] = get_horizontal_fraction(value % 50f32);
+        }
         result
     }
 }
@@ -389,26 +397,47 @@ impl Probability for Hits {
 }
 
 impl Component for HitsGraph {
-    fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
+    fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
         let data = self.hits.to_data();
         debugln!("Data: {:?}", data);
         debugln!("Data max: {:?}", data.get_max());
-        data.iter().for_each(|i| {
-            println!(
-                "{}:\t{} {}",
-                i.0,
-                i.1,
-                Self::get_horizontal_bar(
-                    i.1,
-                    termsize::get()
-                        .unwrap_or(termsize::Size { rows: 0, cols: 0 })
-                        .cols
-                        .into()
+        debugln!("Hit At: {:?}", self.hit);
+        data.iter()
+            .filter(|i| i.1 > 0.1)
+            .map(|i| {
+                (
+                    i.0 as u16,
+                    format!(
+                        "{:>3}:\t{:>5.1} {}\n",
+                        i.0,
+                        i.1,
+                        Self::get_horizontal_bar(
+                            i.1,
+                            Into::<usize>::into(
+                                termsize::get()
+                                    .unwrap_or(termsize::Size { rows: 0, cols: 0 })
+                                    .cols
+                                    / 2
+                            )
+                        )
+                        .iter()
+                        .collect::<String>()
+                    ),
                 )
-                .iter()
-                .collect::<String>()
-            )
-        });
+            })
+            .map(|(i, s)| {
+                if self.hit > 1 && i > self.hit {
+                    s.bold().green()
+                } else if self.hit > 1 && i == self.hit {
+                    s.bold().dark_yellow()
+                } else {
+                    s.reset()
+                }
+            })
+            .for_each(|s| {
+                queue!(stdout, PrintStyledContent(s));
+                queue!(stdout, ResetColor);
+            });
         Ok(())
     }
 

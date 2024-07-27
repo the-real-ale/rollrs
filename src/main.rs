@@ -68,7 +68,7 @@ fn run_sim(matches: &ArgMatches) {
             plot_dice_totals(&d);
         }
         if sim_match.get_flag("Show Hits") {
-            plot_dice_hits(&d);
+            plot_dice_hits(&d, numhits);
         }
         if !sim_match.get_flag("Hide Summary") {
             show_summary(&d, numhits, numtotal);

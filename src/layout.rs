@@ -23,11 +23,12 @@ pub fn plot_dice_totals(dice: &DiceGroup) {
     totalbox.draw(&stdout()).unwrap();
 }
 
-pub fn plot_dice_hits(dice: &DiceGroup) {
+pub fn plot_dice_hits(dice: &DiceGroup, nhits: Option<u16>) {
     let height_row = (drawterm::get_height() as f32 * 0.48) as u16;
     let prob = probability::Hits::from_dice(dice);
     let hitsbox = HitsGraph::new(
         prob,
+        nhits.unwrap_or_default(),
         ComponentData::new(
             0,
             drawterm::get_height() - height_row - 2,

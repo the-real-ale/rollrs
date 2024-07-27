@@ -273,7 +273,7 @@ impl DiceGroup {
     }
 
     pub fn from_previous(
-        dice_args: &String,
+        dice_args: &str,
         default: u16,
         crits: u16,
         hit: u16,
@@ -283,7 +283,7 @@ impl DiceGroup {
         Self::from(&new_args, crits, hit, no_shitty_crit)
     }
 
-    pub fn from(dice_args: &String, crits: u16, hit: u16, no_shitty_crit: bool) -> Option<Self> {
+    pub fn from(dice_args: &str, crits: u16, hit: u16, no_shitty_crit: bool) -> Option<Self> {
         let mut dice_vec = vec![];
         let mut crits = crits;
         if !dice_args.contains('d') {

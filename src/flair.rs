@@ -88,12 +88,12 @@ fn print_bar_checks(checks: &[String]) {
     }
 }
 
-fn print_check(check: &String, len: usize) {
+fn print_check(check: &str, len: usize) {
     drawterm::print(check.to_string());
     print_buffer(len, check);
 }
 
-fn print_buffer(len: usize, check: &String) {
+fn print_buffer(len: usize, check: &str) {
     let mut buffer: String = "  ".to_string();
     for _ in 0..len - check.len() {
         buffer += " ";

@@ -34,11 +34,6 @@ fn run_sim(matches: &ArgMatches) {
         .unwrap_or(&u16::MAX.to_string())
         .parse()
         .unwrap_or(u16::MAX);
-    let reroll: u16 = matches
-        .get_one::<String>("Reroll")
-        .unwrap_or(&u16::MAX.to_string())
-        .parse()
-        .unwrap_or(u16::MAX);
     let numhits: Option<u16> = sim_match
         .get_one::<String>("Hits")
         .unwrap_or(&u16::MAX.to_string())
@@ -182,7 +177,7 @@ The dice sequence \"2*1d20+8 x*1d8+4\" rolls a d8 dice with a +4 modifier for ev
 }
 
 fn roll(
-    dice: &String,
+    dice: &str,
     previous: &mut Summary,
     success: u16,
     no_shitty_crits: bool,
@@ -218,7 +213,7 @@ fn size_console() {
     }
 }
 
-fn wrap(string: &String) -> String {
+fn wrap(string: &str) -> String {
     textwrap::fill(string, drawterm::get_width() as usize - 3)
 }
 

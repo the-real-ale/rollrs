@@ -244,8 +244,8 @@ impl Component for TotalGraph {
                 }
             })
             .for_each(|s| {
-                queue!(stdout, PrintStyledContent(s));
-                queue!(stdout, ResetColor);
+                queue!(stdout, PrintStyledContent(s)).ok();
+                queue!(stdout, ResetColor).ok();
             });
         Ok(())
     }
@@ -364,8 +364,8 @@ impl Component for HitsGraph {
                 }
             })
             .for_each(|s| {
-                queue!(stdout, PrintStyledContent(s));
-                queue!(stdout, ResetColor);
+                queue!(stdout, PrintStyledContent(s)).ok();
+                queue!(stdout, ResetColor).ok();
             });
         Ok(())
     }
@@ -429,33 +429,6 @@ impl Component for SummaryDisplay {
     }
 }
 
-trait MinMax<T> {
-    fn get_min(&self) -> T;
-    fn get_max(&self) -> T;
-}
-
-impl MinMax<f32> for Vec<(f32, f32)> {
-    fn get_min(&self) -> f32 {
-        let mut low = f32::MAX;
-        for entry in self {
-            if entry.1 < low {
-                low = entry.1;
-            }
-        }
-        low
-    }
-
-    fn get_max(&self) -> f32 {
-        let mut high = f32::MIN;
-        for entry in self {
-            if entry.1 > high {
-                high = entry.1;
-            }
-        }
-        high
-    }
-}
-
 fn get_horizontal_bar(value: f32, width: usize) -> Vec<char> {
     let mut result = vec!['█'; (value * width as f32 / 50f32) as usize];
     let len = result.len();
@@ -468,18 +441,6 @@ fn get_horizontal_bar(value: f32, width: usize) -> Vec<char> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_get_min() {
-        let a: Vec<(f32, f32)> = vec![(1., 1.), (2., 3.), (4., 2.)];
-        assert_eq!(a.get_min(), 1.);
-    }
-
-    #[test]
-    fn test_get_max() {
-        let a: Vec<(f32, f32)> = vec![(1., 1.), (2., 3.), (4., 2.)];
-        assert_eq!(a.get_max(), 3.);
-    }
 
     #[test]
     fn test_polynomial_add() {

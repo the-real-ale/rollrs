@@ -386,13 +386,13 @@ impl SummaryDisplay {
         let glitchchance =
             glitchsummary.get_probability_of_gt((dice.get_count() as f32 / 2.).round() as u16);
         let critglitchchance = (1.0 - successchance_hit) * glitchchance;
-        let success_hit: String = format!("{:7.4}", successchance_hit as f32 * 100.);
-        let success_total: String = format!("{:7.4}", successchance_total as f32 * 100.);
-        let glitch: String = format!("{:7.4}", glitchchance as f32 * 100.);
-        let critglitch: String = format!("{:7.4}", critglitchchance as f32 * 100.);
+        let success_hit: String = format!("{:>8.4}", successchance_hit as f32 * 100.);
+        let success_total: String = format!("{:>8.4}", successchance_total as f32 * 100.);
+        let glitch: String = format!("{:>8.4}", glitchchance as f32 * 100.);
+        let critglitch: String = format!("{:>8.4}", critglitchchance as f32 * 100.);
         let text: String;
         if hits != u16::MAX && total != u16::MAX {
-            text = format!("\nProbability of {} total:\t\t{}%\nProbability of {} hits:\t\t{}%\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
+            text = format!("\nProbability of {} total:\t\t{} %\nProbability of {} hits:\t\t{} %\nProbability of glitch:\t\t{} %\nProbability of critical glitch:\t{} %\n",
                 total,
                 success_total.bold(),
                 hits,
@@ -400,18 +400,18 @@ impl SummaryDisplay {
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red());
         } else if hits != u16::MAX {
-            text = format!("\nProbability of success:\t\t{}%\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
+            text = format!("\nProbability of success:\t\t{} %\nProbability of glitch:\t\t{} %\nProbability of critical glitch:\t{} %\n",
                 success_hit.bold(),
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red());
         } else if total != u16::MAX {
-            text = format!("\nProbability of success:\t\t{}%\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
+            text = format!("\nProbability of success:\t\t{} %\nProbability of glitch:\t\t{} %\nProbability of critical glitch:\t{} %\n",
                 success_total.bold(),
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red());
         } else {
             text = format!(
-                "\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
+                "\nProbability of glitch:\t\t{} %\nProbability of critical glitch:\t{} %\n",
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red()
             );

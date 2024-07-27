@@ -11,7 +11,11 @@ use crossterm::{
 };
 use itertools::Itertools;
 
-use crate::{components::Component, drawterm::get_horizontal_fraction, roll::DiceGroup};
+use crate::{
+    components::Component,
+    drawterm::{self, get_horizontal_fraction},
+    roll::DiceGroup,
+};
 
 #[derive(Debug)]
 pub struct Polynomial {
@@ -210,6 +214,11 @@ impl Probability for Total {
 impl Component for TotalGraph {
     fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
         let data = self.totals.to_data();
+        let max = data
+            .iter()
+            .map(|i| i.1)
+            .fold(f32::MIN, |max, x| if x > max { x } else { max });
+        let width = drawterm::get_width() / 2;
         data.iter()
             .filter(|i| i.1 > 0.1)
             .map(|i| {
@@ -219,17 +228,9 @@ impl Component for TotalGraph {
                         "{:>3}:\t{:>5.1} {}\n",
                         i.0,
                         i.1,
-                        get_horizontal_bar(
-                            i.1,
-                            Into::<usize>::into(
-                                termsize::get()
-                                    .unwrap_or(termsize::Size { rows: 0, cols: 0 })
-                                    .cols
-                                    / 2
-                            )
-                        )
-                        .iter()
-                        .collect::<String>()
+                        get_horizontal_bar(i.1 * width as f32 / max)
+                            .iter()
+                            .collect::<String>()
                     ),
                 )
             })
@@ -330,6 +331,11 @@ impl Probability for Hits {
 impl Component for HitsGraph {
     fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
         let data = self.hits.to_data();
+        let max = data
+            .iter()
+            .map(|i| i.1)
+            .fold(f32::MIN, |max, x| if x > max { x } else { max });
+        let width = drawterm::get_width() / 2;
         data.iter()
             .filter(|i| i.1 > 0.1)
             .map(|i| {
@@ -339,17 +345,9 @@ impl Component for HitsGraph {
                         "{:>3}:\t{:>5.1} {}\n",
                         i.0,
                         i.1,
-                        get_horizontal_bar(
-                            i.1,
-                            Into::<usize>::into(
-                                termsize::get()
-                                    .unwrap_or(termsize::Size { rows: 0, cols: 0 })
-                                    .cols
-                                    / 2
-                            )
-                        )
-                        .iter()
-                        .collect::<String>()
+                        get_horizontal_bar(i.1 * width as f32 / max)
+                            .iter()
+                            .collect::<String>()
                     ),
                 )
             })
@@ -429,11 +427,11 @@ impl Component for SummaryDisplay {
     }
 }
 
-fn get_horizontal_bar(value: f32, width: usize) -> Vec<char> {
-    let mut result = vec!['█'; (value * width as f32 / 50f32) as usize];
+fn get_horizontal_bar(value: f32) -> Vec<char> {
+    let mut result = vec!['█'; value as usize];
     let len = result.len();
     if len != 0 {
-        result[len - 1] = get_horizontal_fraction(value % width as f32);
+        result[len - 1] = get_horizontal_fraction(value - value.floor());
     }
     result
 }

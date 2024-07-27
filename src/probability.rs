@@ -1,19 +1,32 @@
-use std::{collections::HashMap, ops::{self, MulAssign}, fmt::{Display, Debug}, io::{Stdout}};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+    io::Stdout,
+    ops::{self, MulAssign},
+};
 
-use crossterm::{style::Stylize};
+use crossterm::{
+    queue,
+    style::{Print, PrintStyledContent, ResetColor, Stylize},
+};
 use itertools::Itertools;
-use textplots::{Chart, Plot};
 
-use crate::{roll::DiceGroup, components::{ComponentData, Component, TextBox}};
+use crate::{
+    components::Component,
+    drawterm::{self, get_horizontal_fraction},
+    roll::DiceGroup,
+};
 
 #[derive(Debug)]
 pub struct Polynomial {
-    coefficients : HashMap<u16, f64>
+    coefficients: HashMap<u16, f64>,
 }
 
 impl Polynomial {
     pub fn new() -> Self {
-        Self {coefficients : HashMap::new()}
+        Self {
+            coefficients: HashMap::new(),
+        }
     }
 
     pub fn get_coefficient(&self, exponent: u16) -> f64 {
@@ -28,15 +41,14 @@ impl Polynomial {
         self.coefficients.insert(exponent, value);
     }
 
-    pub fn pow(&self, exponent: u16) -> Polynomial{
+    pub fn pow(&self, exponent: u16) -> Polynomial {
         let copy = self.clone();
         let mut result = self.clone();
         if exponent != 0 {
             for _ in 0..exponent - 1 {
                 result.mul_assign(copy.clone());
             }
-        }
-        else {
+        } else {
             result = Polynomial::new();
         }
         result
@@ -45,7 +57,9 @@ impl Polynomial {
 
 impl Clone for Polynomial {
     fn clone(&self) -> Self {
-        Self { coefficients: self.coefficients.clone() }
+        Self {
+            coefficients: self.coefficients.clone(),
+        }
     }
 }
 
@@ -134,11 +148,9 @@ impl PartialEq<Polynomial> for Polynomial {
 
 pub trait Probability {
     fn from_dice(dice: &DiceGroup) -> Self;
-    fn get_mean(&self) -> u16;
-    fn get_mean_probability(&self) -> f64;
     fn get_probability_of(&self, value: u16) -> f64;
     fn get_probability_of_gt(&self, value: u16) -> f64;
-    fn to_data(&self) -> Vec<(f32, f32)>;
+    fn to_data(&self) -> Vec<(u16, f32)>;
 }
 
 pub struct Total {
@@ -147,22 +159,13 @@ pub struct Total {
 }
 
 pub struct TotalGraph {
-    total: Total,
-    component: ComponentData,
-    show_border: bool,
+    totals: Total,
+    total: u16,
 }
 
 impl TotalGraph {
-    pub fn new(total: Total, component: ComponentData, show_border: bool) -> Self{
-        let mut newcomponent = component.clone();
-        while Self::to_chart_height(newcomponent.height) < 32 {
-            newcomponent.height += 1;
-        }
-        Self {total, component: newcomponent, show_border}
-    }
-
-    fn to_chart_height(rows: u16) -> u32 {
-        (rows as u32 - 2) * 4
+    pub fn new(totals: Total, total: u16) -> Self {
+        Self { totals, total }
     }
 }
 
@@ -175,127 +178,120 @@ impl Probability for Total {
             poly.set_coefficient(i, 1.0 / sides as f64);
         }
         poly = poly.pow(num);
-        Total{polynomial: poly, dice: dice.clone()}
-    }
-
-    fn get_mean(&self) -> u16 {
-        todo!()
-    }
-
-    fn get_mean_probability(&self) -> f64 {
-        todo!()
+        Total {
+            polynomial: poly,
+            dice: dice.clone(),
+        }
     }
 
     fn get_probability_of(&self, value: u16) -> f64 {
-        self.polynomial.get_coefficient(value) 
+        self.polynomial.get_coefficient(value)
     }
 
     fn get_probability_of_gt(&self, value: u16) -> f64 {
-        let mut total = 0.0;
-        for i in self.polynomial.get_coefficients().keys().sorted() {
-            if *i >= value {
-                total += self.get_probability_of(*i);
-            }
-        }
-        total
+        self.polynomial
+            .get_coefficients()
+            .keys()
+            .filter(|i| **i >= value)
+            .fold(0.0, |total, i| total + self.get_probability_of(*i))
     }
 
-    fn to_data(&self) -> Vec<(f32, f32)> {
-        let mut vec = vec![];
-        vec.push(((self.dice.get_count() + self.dice.get_total_modifier() - 1) as f32, 0.));
-        for entry in self.polynomial.get_coefficients().keys().sorted() {
-            vec.push(((self.dice.get_total_modifier() + *entry) as f32, 100. * self.get_probability_of(*entry) as f32));
-        }
-        vec.clone()
+    fn to_data(&self) -> Vec<(u16, f32)> {
+        self.polynomial
+            .get_coefficients()
+            .keys()
+            .sorted()
+            .map(|entry| {
+                (
+                    *entry + self.dice.get_total_modifier(),
+                    100. * self.get_probability_of(*entry) as f32,
+                )
+            })
+            .collect()
     }
 }
 
 impl Component for TotalGraph {
-    fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
-        let data = self.total.to_data();
-        let text = Chart::new_with_y_range((self.get_width() as u32 - 8) * 2,  
-                                        Self::to_chart_height(self.get_height()), 
-                                        data[0].0/* - 1.*/, 
-                                        data[data.len() - 1].0 + 1., 
-                                        0., 
-                                        data.get_max() * 1.15)
-            .lineplot(&textplots::Shape::Bars(data.as_slice()))
-            .to_string();
-        let databox = TextBox::new(self.component.clone(), text, self.show_border);
-        databox.draw(stdout)?;
+    fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
+        let data = self.totals.to_data();
+        let max = data
+            .iter()
+            .map(|i| i.1)
+            .fold(f32::MIN, |max, x| if x > max { x } else { max });
+        let width = drawterm::get_width() / 2;
+        data.iter()
+            .filter(|i| i.1 > 0.1)
+            .map(|i| {
+                (
+                    i.0,
+                    format!(
+                        "{:>3}:\t{:>5.1} {}\n",
+                        i.0,
+                        i.1,
+                        get_horizontal_bar(i.1 * width as f32 / max)
+                            .iter()
+                            .collect::<String>()
+                    ),
+                )
+            })
+            .map(|(i, s)| {
+                if self.total > 1 && i > self.total {
+                    s.bold().green()
+                } else if self.total > 1 && i == self.total {
+                    s.bold().dark_yellow()
+                } else {
+                    s.reset()
+                }
+            })
+            .for_each(|s| {
+                queue!(stdout, PrintStyledContent(s)).ok();
+                queue!(stdout, ResetColor).ok();
+            });
         Ok(())
-    }
-
-    fn get_width(&self) -> u16 {
-        self.component.width
-    }
-
-    fn get_height(&self) -> u16 {
-        self.component.height
-    }
-
-    fn get_position(&self) -> (u16, u16) {
-        self.component.position
-    }
-
-    fn set_width(&mut self, width: u16) {
-        self.component.width = width;
-    }
-
-    fn set_height(&mut self, height: u16) {
-        self.component.height = height;
-    }
-
-    fn set_position(&mut self, pos: (u16, u16)) {
-        self.component.position = pos;
     }
 }
 
 pub struct Hits {
-    data: HashMap<u16, f64>
+    data: HashMap<u16, f64>,
 }
 
 pub struct HitsGraph {
     hits: Hits,
-    component: ComponentData,
-    show_border: bool,
+    hit: u16,
 }
 
 impl HitsGraph {
-    pub fn new(hits: Hits, component: ComponentData, show_border: bool) -> Self{
-        let mut newcomponent = component.clone();
-        while Self::to_chart_height(newcomponent.height) < 32 {
-            newcomponent.height += 1;
-        }
-        Self {hits, component: newcomponent, show_border}
-    }
-
-    fn to_chart_height(rows: u16) -> u32 {
-        (rows as u32 - 2) * 4
+    pub fn new(hits: Hits, hit: u16) -> Self {
+        Self { hits, hit }
     }
 }
 
 impl Hits {
-    // For n dice of r sides with success on s sides, 
+    // For n dice of r sides with success on s sides,
     // prob(x successes) = (n choose x)*((s/r)^x)*((r-s)/r)^(n-x)
     fn create_data(dice: &DiceGroup) -> HashMap<u16, f64> {
         let mut data = HashMap::new();
         let sides = dice.get_sides().unwrap_or(1);
-        let success_sides = if dice.get_hit() <= sides {sides - (dice.get_hit() - 1)} else {0};
+        let success_sides = if dice.get_hit() <= sides {
+            sides - (dice.get_hit() - 1)
+        } else {
+            0
+        };
         let n = dice.get_count();
         for x in 0..=dice.get_count() {
             let mut coeff: f64 = 1.;
-            let value: f64;
-            for i in dice.get_count() - x + 1 ..= dice.get_count() {
+
+            for i in dice.get_count() - x + 1..=dice.get_count() {
                 coeff *= i as f64;
             }
-            for i in 1 ..= x {
+            for i in 1..=x {
                 coeff /= i as f64;
             }
 
-            let dice_factor = ((sides - success_sides) as f64 / sides as f64).powi(n as i32 - x as i32);
+            let dice_factor =
+                ((sides - success_sides) as f64 / sides as f64).powi(n as i32 - x as i32);
             let succ_factor = (success_sides as f64 / sides as f64).powi(x as i32);
-            value = coeff * succ_factor * dice_factor;
+            let value: f64 = coeff * succ_factor * dice_factor;
             data.insert(x, value);
         }
         data
@@ -304,15 +300,9 @@ impl Hits {
 
 impl Probability for Hits {
     fn from_dice(dice: &DiceGroup) -> Self {
-        Self {data: Self::create_data(dice)}
-    }
-
-    fn get_mean(&self) -> u16 {
-        todo!()
-    }
-
-    fn get_mean_probability(&self) -> f64 {
-        todo!()
+        Self {
+            data: Self::create_data(dice),
+        }
     }
 
     fn get_probability_of(&self, value: u16) -> f64 {
@@ -329,190 +319,126 @@ impl Probability for Hits {
         total
     }
 
-    fn to_data(&self) -> Vec<(f32, f32)> {
-        let mut vec = vec![];
-        vec.push((-1., 0.));
-        for entry in self.data.keys().sorted() {
-            vec.push((*entry as f32, 100. * self.get_probability_of(*entry) as f32));
-        }
-        vec
+    fn to_data(&self) -> Vec<(u16, f32)> {
+        self.data
+            .keys()
+            .sorted()
+            .map(|entry| (*entry, 100. * self.get_probability_of(*entry) as f32))
+            .collect()
     }
 }
 
 impl Component for HitsGraph {
-    fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
+    fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
         let data = self.hits.to_data();
-        let text = Chart::new_with_y_range((self.get_width() as u32 - 8) * 2,  
-                                        Self::to_chart_height(self.get_height()), 
-                                        data[0].0/* - 1.*/, 
-                                        data[data.len() - 1].0 + 1., 
-                                        0., 
-                                        data.get_max() * 1.15)
-            .lineplot(&textplots::Shape::Bars(data.as_slice()))
-            .to_string();
-        let databox = TextBox::new(self.component.clone(), text, self.show_border);
-        databox.draw(stdout)?;
+        let max = data
+            .iter()
+            .map(|i| i.1)
+            .fold(f32::MIN, |max, x| if x > max { x } else { max });
+        let width = drawterm::get_width() / 2;
+        data.iter()
+            .filter(|i| i.1 > 0.1)
+            .map(|i| {
+                (
+                    i.0,
+                    format!(
+                        "{:>3}:\t{:>5.1} {}\n",
+                        i.0,
+                        i.1,
+                        get_horizontal_bar(i.1 * width as f32 / max)
+                            .iter()
+                            .collect::<String>()
+                    ),
+                )
+            })
+            .map(|(i, s)| {
+                if self.hit > 1 && i > self.hit {
+                    s.bold().green()
+                } else if self.hit > 1 && i == self.hit {
+                    s.bold().dark_yellow()
+                } else {
+                    s.reset()
+                }
+            })
+            .for_each(|s| {
+                queue!(stdout, PrintStyledContent(s)).ok();
+                queue!(stdout, ResetColor).ok();
+            });
         Ok(())
-    }
-
-    fn get_width(&self) -> u16 {
-        self.component.width
-    }
-
-    fn get_height(&self) -> u16 {
-        self.component.height
-    }
-
-    fn get_position(&self) -> (u16, u16) {
-        self.component.position
-    }
-
-    fn set_width(&mut self, width: u16) {
-        self.component.width = width;
-    }
-
-    fn set_height(&mut self, height: u16) {
-        self.component.height = height;
-    }
-
-    fn set_position(&mut self, pos: (u16, u16)) {
-        self.component.position = pos;
     }
 }
 
 pub struct SummaryDisplay {
     text: String,
-    component: ComponentData,
-    show_border: bool,
 }
 
 impl SummaryDisplay {
-    pub fn new(component: ComponentData, dice: &DiceGroup, hitnum: Option<u16>, totalnum: Option<u16>, show_border: bool) -> Self {
+    pub fn new(dice: &DiceGroup, hitnum: Option<u16>, totalnum: Option<u16>) -> Self {
         let hits = hitnum.unwrap_or(u16::MAX);
         let total = totalnum.unwrap_or(u16::MAX);
-        let mut newcomponent = component.clone();
-        let hitsummary = Hits::from_dice(&dice);
-        let totalsummary = Total::from_dice(&dice);
+        let hitsummary = Hits::from_dice(dice);
+        let totalsummary = Total::from_dice(dice);
         let glitchdice = DiceGroup::new(dice.dice.clone(), dice.get_sides().unwrap_or(u16::MAX));
         let glitchsummary = Hits::from_dice(&glitchdice);
         let successchance_hit = hitsummary.get_probability_of_gt(hits);
-        let successchance_total = totalsummary.get_probability_of_gt(total);
-        let glitchchance = glitchsummary.get_probability_of_gt((dice.get_count() as f32 / 2.).round() as u16);
+        let successchance_total =
+            totalsummary.get_probability_of_gt(total - dice.get_total_modifier());
+        let glitchchance =
+            glitchsummary.get_probability_of_gt((dice.get_count() as f32 / 2.).round() as u16);
         let critglitchchance = (1.0 - successchance_hit) * glitchchance;
-        let success_hit: String =  format!("{:7.4}", successchance_hit as f32 * 100.);
-        let success_total: String =  format!("{:7.4}", successchance_total as f32 * 100.);
-        let glitch: String =     format!("{:7.4}", glitchchance as f32 * 100.);
+        let success_hit: String = format!("{:7.4}", successchance_hit as f32 * 100.);
+        let success_total: String = format!("{:7.4}", successchance_total as f32 * 100.);
+        let glitch: String = format!("{:7.4}", glitchchance as f32 * 100.);
         let critglitch: String = format!("{:7.4}", critglitchchance as f32 * 100.);
         let text: String;
         if hits != u16::MAX && total != u16::MAX {
-            newcomponent.position.1 -= 1;
-            newcomponent.height += 1;
             text = format!("\nProbability of {} total:\t\t{}%\nProbability of {} hits:\t\t{}%\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
                 total,
                 success_total.bold(),
                 hits,
-                success_hit.bold(), 
+                success_hit.bold(),
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red());
-        }
-        else if hits != u16::MAX {
+        } else if hits != u16::MAX {
             text = format!("\nProbability of success:\t\t{}%\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
-                success_hit.bold(), 
+                success_hit.bold(),
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red());
-        }
-        else if total != u16::MAX {
+        } else if total != u16::MAX {
             text = format!("\nProbability of success:\t\t{}%\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
-                success_total.bold(), 
+                success_total.bold(),
                 glitch.bold().dark_yellow(),
                 critglitch.bold().dark_red());
-        }
-        else {
-            newcomponent.position.1 += 1;
-            newcomponent.height -= 1;
-            text = format!("\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
+        } else {
+            text = format!(
+                "\nProbability of glitch:\t\t{}%\nProbability of critical glitch:\t{}%",
                 glitch.bold().dark_yellow(),
-                critglitch.bold().dark_red());
-
+                critglitch.bold().dark_red()
+            );
         }
-        Self {text, component: newcomponent, show_border}
+        Self { text }
     }
 }
 
 impl Component for SummaryDisplay {
-    fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
-        let databox = TextBox::new(self.component.clone(), self.text.clone(), self.show_border);
-        databox.draw(stdout)?;
+    fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
+        queue!(stdout, Print(self.text.as_str()))?;
         Ok(())
     }
-
-    fn get_width(&self) -> u16 {
-        self.component.width
-    }
-
-    fn get_height(&self) -> u16 {
-        self.component.height
-    }
-
-    fn get_position(&self) -> (u16, u16) {
-        self.component.position
-    }
-
-    fn set_width(&mut self, width: u16) {
-        self.component.width = width;
-    }
-
-    fn set_height(&mut self, height: u16) {
-        self.component.height = height;
-    }
-
-    fn set_position(&mut self, pos: (u16, u16)) {
-        self.component.position = pos;
-    }
 }
 
-trait MinMax<T> {
-    fn get_min(&self) -> T;
-    fn get_max(&self) -> T;
-}
-
-impl MinMax<f32> for Vec<(f32, f32)> {
-    fn get_min(&self) -> f32 {
-        let mut low = f32::MAX;
-        for entry in self {
-            if entry.1 < low {
-                low = entry.1;
-            }
-        }
-        low
+fn get_horizontal_bar(value: f32) -> Vec<char> {
+    let mut result = vec!['█'; value as usize];
+    let len = result.len();
+    if len != 0 {
+        result[len - 1] = get_horizontal_fraction(value - value.floor());
     }
-
-    fn get_max(&self) -> f32 {
-        let mut high = f32::MIN;
-        for entry in self {
-            if entry.1 > high {
-                high = entry.1;
-            }
-        }
-        high
-    }
+    result
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_get_min() {
-        let a: Vec<(f32, f32)> = vec![(1., 1.), (2., 3.), (4., 2.)];
-        assert_eq!(a.get_min(), 1.);
-    }
-
-    #[test]
-    fn test_get_max() {
-        let a: Vec<(f32, f32)> = vec![(1., 1.), (2., 3.), (4., 2.)];
-        assert_eq!(a.get_max(), 3.);
-    }
 
     #[test]
     fn test_polynomial_add() {

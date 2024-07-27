@@ -1,47 +1,55 @@
 use std::io::stdout;
 
-use clap::{command, Arg, ArgAction, Command, ArgMatches};
-use crossterm::{style::Stylize, execute, terminal};
-use layout::{plot_dice_totals, plot_dice_hits, show_summary};
-use roll::{Roller, Summary, DiceGroup};
+use clap::{command, Arg, ArgAction, ArgMatches, Command};
+use crossterm::{execute, style::Stylize, terminal};
+use layout::{plot_dice_hits, plot_dice_totals, show_summary};
+use roll::{DiceGroup, Roller, Summary};
 
 mod components;
 mod drawterm;
-mod flair;
-mod layout;
-mod roll;
-mod probability;
-mod name;
 mod first_names;
+mod flair;
 mod last_names;
+mod layout;
+mod name;
+mod probability;
+mod roll;
 
 fn main() {
     let matches = get_matches();
     size_console();
-    if matches.subcommand_matches("help-dice").is_some(){
+    if matches.subcommand_matches("help-dice").is_some() {
         run_demo()
-    }
-    else if matches.subcommand_matches("sim").is_some(){
+    } else if matches.subcommand_matches("sim").is_some() {
         run_sim(&matches);
-    }
-    else {
+    } else {
         run_roll(&matches);
     }
 }
 
-fn run_sim(matches : &ArgMatches){
+fn run_sim(matches: &ArgMatches) {
     let sim_match = matches.subcommand_matches("sim").unwrap();
-    let success: u16 = matches.get_one::<String>("Success").unwrap_or(&u16::MAX.to_string()).parse().unwrap_or(u16::MAX);
-    let reroll: u16 = matches.get_one::<String>("Reroll").unwrap_or(&u16::MAX.to_string()).parse().unwrap_or(u16::MAX);
-    let numhits: Option<u16> = sim_match.get_one::<String>("Hits").unwrap_or(&u16::MAX.to_string()).parse().ok();
-    let numtotal: Option<u16> = sim_match.get_one::<String>("Total").unwrap_or(&u16::MAX.to_string()).parse().ok();
-    let dice_args = matches.get_many::<String>("Dice").unwrap_or_else(
-        || {
-            show_dice_warning(); 
-            clap::parser::ValuesRef::default()
-        });
+    let success: u16 = matches
+        .get_one::<String>("Success")
+        .unwrap_or(&u16::MAX.to_string())
+        .parse()
+        .unwrap_or(u16::MAX);
+    let numhits: Option<u16> = sim_match
+        .get_one::<String>("Hits")
+        .unwrap_or(&u16::MAX.to_string())
+        .parse()
+        .ok();
+    let numtotal: Option<u16> = sim_match
+        .get_one::<String>("Total")
+        .unwrap_or(&u16::MAX.to_string())
+        .parse()
+        .ok();
+    let dice_args = matches.get_many::<String>("Dice").unwrap_or_else(|| {
+        show_dice_warning();
+        clap::parser::ValuesRef::default()
+    });
 
-    if !sim_match.get_flag("NoBS"){
+    if !sim_match.get_flag("NoBS") {
         flair::print_silly_shit();
     }
     for dice in dice_args {
@@ -52,10 +60,10 @@ fn run_sim(matches : &ArgMatches){
 
         let d = DiceGroup::from(dice, 0, success, matches.get_flag("NSC")).unwrap_or_default();
         if sim_match.get_flag("Show Totals") {
-            plot_dice_totals(&d);
+            plot_dice_totals(&d, numtotal);
         }
         if sim_match.get_flag("Show Hits") {
-            plot_dice_hits(&d);
+            plot_dice_hits(&d, numhits);
         }
         if !sim_match.get_flag("Hide Summary") {
             show_summary(&d, numhits, numtotal);
@@ -63,24 +71,43 @@ fn run_sim(matches : &ArgMatches){
     }
 }
 
-fn run_roll(matches : &ArgMatches){
+fn run_roll(matches: &ArgMatches) {
     let mut previous = Summary::new();
     let mut total = Summary::new();
-    let success : u16 = matches.get_one::<String>("Success").unwrap_or(&u16::MAX.to_string()).parse().unwrap_or(u16::MAX);
-    let reroll : u16 = matches.get_one::<String>("Reroll").unwrap_or(&u16::MAX.to_string()).parse().unwrap_or(u16::MAX);
-    let critval : u16 = matches.get_one::<String>("Crit").unwrap_or(&u16::MAX.to_string()).parse().unwrap_or(u16::MAX);
+    let success: u16 = matches
+        .get_one::<String>("Success")
+        .unwrap_or(&u16::MAX.to_string())
+        .parse()
+        .unwrap_or(u16::MAX);
+    let reroll: u16 = matches
+        .get_one::<String>("Reroll")
+        .unwrap_or(&u16::MAX.to_string())
+        .parse()
+        .unwrap_or(u16::MAX);
+    let critval: u16 = matches
+        .get_one::<String>("Crit")
+        .unwrap_or(&u16::MAX.to_string())
+        .parse()
+        .unwrap_or(u16::MAX);
     let no_shitty_crits = matches.get_flag("NSC");
-    let dice_args = matches.get_many::<String>("Dice").unwrap_or_else(
-        || {
-            show_dice_warning(); 
-            clap::parser::ValuesRef::default()
-        });
+    let dice_args = matches.get_many::<String>("Dice").unwrap_or_else(|| {
+        show_dice_warning();
+        clap::parser::ValuesRef::default()
+    });
     for dice in dice_args {
         if dice.trim().is_empty() {
             show_dice_warning();
             continue;
         }
-        roll(dice, &mut previous, success, no_shitty_crits, critval, reroll, &mut total);
+        roll(
+            dice,
+            &mut previous,
+            success,
+            no_shitty_crits,
+            critval,
+            reroll,
+            &mut total,
+        );
     }
 
     total.print(matches.get_flag("Verbose"));
@@ -94,7 +121,15 @@ fn run_demo() {
     println!("{}",wrap(
         &format!("Specify the number and type of dice in \'{}\' format. For example five six-sided dice is 5d6.", "x*ndm+c".bold())));
     println!("\n>> {}\n -->", "roll -v -d \"5d6\"".bold());
-    roll(&"5d6".to_string(), &mut Summary::new(), u16::MAX, false, u16::MAX, u16::MAX, &mut total);
+    roll(
+        &"5d6".to_string(),
+        &mut Summary::new(),
+        u16::MAX,
+        false,
+        u16::MAX,
+        u16::MAX,
+        &mut total,
+    );
     total.print(true);
     total = Summary::new();
 
@@ -102,20 +137,62 @@ fn run_demo() {
 Dice arguments may contain a constant modifier by using a plus sign at the end of the dice. '2d6+4' Rolls two six-sided dice with a +4 modifier. \
 The modifier may be applied to multiple dice using the multiplication operator. '2*1d20+8' rolls two twenty-sided dice and applies a +8 modifier to each roll.".to_string()));
     println!("\n>> {}\n -->", "roll -v -d \"2*1d20+8\" -s 20".bold());
-    roll(&"2*1d20+8".to_string(), &mut Summary::new(), 20, false, u16::MAX, u16::MAX, &mut total);
+    roll(
+        &"2*1d20+8".to_string(),
+        &mut Summary::new(),
+        20,
+        false,
+        u16::MAX,
+        u16::MAX,
+        &mut total,
+    );
     total.print(true);
     total = Summary::new();
 
     println!("\n{}", wrap(&"Arguments may contain a reference to the previous number of 'successes' using the letter 'x'. \
 The dice sequence \"2*1d20+8 x*1d8+4\" rolls a d8 dice with a +4 modifier for every 'success' received on the previous set of twenty-sided dice.".to_string()));
-    println!("\n>> {}\n -->", "roll -v -d \"3*1d20+8 x*1d8+4\" -s 14".bold());
-    roll(&"3*1d20+8".to_string(), &mut previous, 14, false, u16::MAX, u16::MAX, &mut total);
-    roll(&"x*1d8+4".to_string(), &mut previous, 14, false, u16::MAX, u16::MAX, &mut total);
+    println!(
+        "\n>> {}\n -->",
+        "roll -v -d \"3*1d20+8 x*1d8+4\" -s 14".bold()
+    );
+    roll(
+        &"3*1d20+8".to_string(),
+        &mut previous,
+        14,
+        false,
+        u16::MAX,
+        u16::MAX,
+        &mut total,
+    );
+    roll(
+        &"x*1d8+4".to_string(),
+        &mut previous,
+        14,
+        false,
+        u16::MAX,
+        u16::MAX,
+        &mut total,
+    );
     total.print(true);
 }
 
-fn roll(dice: &String, previous: &mut Summary, success: u16, no_shitty_crits: bool, critval: u16, reroll: u16, total: &mut Summary) {
-    let d = DiceGroup::from_previous(dice, previous.get_hits(), previous.get_crits(), success, no_shitty_crits).unwrap_or_default();
+fn roll(
+    dice: &str,
+    previous: &mut Summary,
+    success: u16,
+    no_shitty_crits: bool,
+    critval: u16,
+    reroll: u16,
+    total: &mut Summary,
+) {
+    let d = DiceGroup::from_previous(
+        dice,
+        previous.get_hits(),
+        previous.get_crits(),
+        success,
+        no_shitty_crits,
+    )
+    .unwrap_or_default();
     let mut roller = Roller::from_dice_group(d, critval, success, reroll);
     roller.roll(no_shitty_crits);
     let summary = roller.get_summary();
@@ -123,12 +200,10 @@ fn roll(dice: &String, previous: &mut Summary, success: u16, no_shitty_crits: bo
     *previous = summary;
 }
 
-fn show_dice_warning(){
-    println!("\n{} {}\n\t{}\n\n{}\n", 
+fn show_dice_warning() {
+    println!("\n{} The following suggested arguments were not provided:\n\t{}\n\nThe dice roller has no dice to roll...\n", 
         "warning:".bold().dark_yellow(),
-        "The following suggested arguments were not provided:",
-        "--dice <Dice>".green(),
-        "The dice roller has no dice to roll..."
+        "--dice <Dice>".green()
     )
 }
 
@@ -138,12 +213,15 @@ fn size_console() {
     }
 }
 
-fn wrap(string: &String) -> String {
+fn wrap(string: &str) -> String {
     textwrap::fill(string, drawterm::get_width() as usize - 3)
 }
 
-fn get_matches() -> ArgMatches{
-    let dice_help = format!("The number and type of dice in \'x*ndm+c\' format. Type {} for more information.", "help-dice".to_string().bold());
+fn get_matches() -> ArgMatches {
+    let dice_help = format!(
+        "The number and type of dice in \'x*ndm+c\' format. Type {} for more information.",
+        "help-dice".to_string().bold()
+    );
     command!()
         .arg(
             Arg::new("Dice")

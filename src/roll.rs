@@ -65,11 +65,19 @@ impl Summary {
         if self.get_results().is_empty() && !self.summaries.is_empty() {
             f.write_str(format!("{}\n", chrono::Local::now()).as_str())
                 .ok();
-            f.write_str(format!("____________________________________\n").as_str())
-                .ok();
+            f.write_str(
+                "____________________________________\n"
+                    .to_string()
+                    .as_str(),
+            )
+            .ok();
         } else if self.get_results().is_empty() {
-            f.write_str(format!("____________________________________\n").as_str())
-                .ok();
+            f.write_str(
+                "____________________________________\n"
+                    .to_string()
+                    .as_str(),
+            )
+            .ok();
         } else {
             if verbose {
                 self.print_dice(f)
@@ -79,8 +87,12 @@ impl Summary {
             f.write_str(format!("Total (+{}):\t{}\n", self.total_modifier, self.total).as_str())
                 .ok();
             self.print_glitch(f);
-            f.write_str(format!("____________________________________\n").as_str())
-                .ok();
+            f.write_str(
+                "____________________________________\n"
+                    .to_string()
+                    .as_str(),
+            )
+            .ok();
         }
         for summary in &self.summaries {
             summary.print(verbose, f);
@@ -158,13 +170,11 @@ pub struct Die {
 
 impl Die {
     pub fn roll(&self, nsc: bool) -> u16 {
-        let num;
         if self.crit && nsc {
-            num = self.modifier + self.sides;
+            self.modifier + self.sides
         } else {
-            num = 1 + self.modifier + rand::random::<u16>() % self.sides;
+            1 + self.modifier + rand::random::<u16>() % self.sides
         }
-        num
     }
 }
 

@@ -9,7 +9,6 @@ use crossterm::{
     execute, queue,
     style::{Print, PrintStyledContent, ResetColor, Stylize},
 };
-use debug::debugln;
 use itertools::Itertools;
 
 use crate::{
@@ -240,7 +239,6 @@ impl Probability for Total {
 impl Component for TotalGraph {
     fn draw(&self, stdout: &Stdout) -> crossterm::Result<()> {
         let data = self.total.to_data();
-        debugln!("Data: {:?}", data);
         let text = Hist1D::new(
             data.len() as u16,
             (0., data.len() as f32),
@@ -399,9 +397,6 @@ impl Probability for Hits {
 impl Component for HitsGraph {
     fn draw(&self, mut stdout: &Stdout) -> crossterm::Result<()> {
         let data = self.hits.to_data();
-        debugln!("Data: {:?}", data);
-        debugln!("Data max: {:?}", data.get_max());
-        debugln!("Hit At: {:?}", self.hit);
         data.iter()
             .filter(|i| i.1 > 0.1)
             .map(|i| {

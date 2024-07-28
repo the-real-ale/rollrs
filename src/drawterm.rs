@@ -33,10 +33,6 @@ pub fn print(str: String) {
     print_color(str, Color::Reset).unwrap_or(());
 }
 
-pub fn get_height() -> u16 {
-    crossterm::terminal::size().unwrap().1
-}
-
 pub fn get_width() -> u16 {
     crossterm::terminal::size().unwrap().0
 }

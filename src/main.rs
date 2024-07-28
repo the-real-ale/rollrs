@@ -2,9 +2,8 @@ use std::io::stdout;
 
 use clap::{command, Arg, ArgAction, ArgMatches, Command};
 use crossterm::{
-    execute, queue,
+    queue,
     style::{Print, Stylize},
-    terminal,
 };
 use layout::{plot_dice_hits, plot_dice_totals, show_summary};
 use roll::{DiceGroup, Roller, Summary};
@@ -21,7 +20,6 @@ mod roll;
 
 fn main() {
     let matches = get_matches();
-    size_console();
     if matches.subcommand_matches("help-dice").is_some() {
         run_demo()
     } else if matches.subcommand_matches("sim").is_some() {
@@ -210,12 +208,6 @@ fn show_dice_warning() {
         "warning:".bold().dark_yellow(),
         "--dice <Dice>".green()
     )
-}
-
-fn size_console() {
-    if drawterm::get_height() == 0 || drawterm::get_width() == 0 {
-        execute!(&mut stdout(), terminal::SetSize(100, 60)).unwrap();
-    }
 }
 
 fn wrap(string: &str) -> String {

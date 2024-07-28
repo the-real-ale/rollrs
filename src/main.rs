@@ -23,52 +23,159 @@ fn main() {
     if matches.subcommand_matches("help-dice").is_some() {
         run_demo()
     } else if matches.subcommand_matches("sim").is_some() {
-        run_sim(&matches);
+        run_sim((&matches).into());
+    } else if matches.subcommand_matches("hits").is_some() {
+        run_sim(SimArgs::show_hits(&matches));
+    } else if matches.subcommand_matches("total").is_some() {
+        run_sim(SimArgs::show_total(&matches));
     } else {
         run_roll(&matches);
     }
 }
 
-fn run_sim(matches: &ArgMatches) {
-    let sim_match = matches.subcommand_matches("sim").unwrap();
-    let success: u16 = matches
-        .get_one::<String>("Success")
-        .unwrap_or(&u16::MAX.to_string())
-        .parse()
-        .unwrap_or(u16::MAX);
-    let numhits: Option<u16> = sim_match
-        .get_one::<String>("Hits")
-        .unwrap_or(&u16::MAX.to_string())
-        .parse()
-        .ok();
-    let numtotal: Option<u16> = sim_match
-        .get_one::<String>("Total")
-        .unwrap_or(&u16::MAX.to_string())
-        .parse()
-        .ok();
-    let dice_args = matches.get_many::<String>("Dice").unwrap_or_else(|| {
-        show_dice_warning();
-        clap::parser::ValuesRef::default()
-    });
+struct SimArgs {
+    pub success: u16,
+    pub print_bullshit: bool,
+    pub show_total: bool,
+    pub show_hits: bool,
+    pub show_summary: bool,
+    pub no_shitty_crits: bool,
+    pub numhits: Option<u16>,
+    pub numtotal: Option<u16>,
+    pub dice_args: Vec<String>,
+}
 
-    if !sim_match.get_flag("NoBS") {
+impl SimArgs {
+    pub fn show_hits(args: &ArgMatches) -> Self {
+        let hit_match = args.subcommand_matches("hits").unwrap();
+        let success: u16 = args
+            .get_one::<String>("Success")
+            .unwrap_or(&u16::MAX.to_string())
+            .parse()
+            .unwrap_or(u16::MAX);
+        let numhits: Option<u16> = hit_match
+            .get_one::<String>("Target Hits")
+            .unwrap_or(&u16::MAX.to_string())
+            .parse()
+            .ok();
+        let dice_args = args
+            .get_many::<String>("Dice")
+            .unwrap_or_else(|| {
+                show_dice_warning();
+                clap::parser::ValuesRef::default()
+            })
+            .cloned()
+            .collect();
+
+        Self {
+            success,
+            print_bullshit: false,
+            show_total: false,
+            show_hits: true,
+            show_summary: true,
+            no_shitty_crits: false,
+            numhits,
+            numtotal: None,
+            dice_args,
+        }
+    }
+
+    pub fn show_total(args: &ArgMatches) -> Self {
+        let total_match = args.subcommand_matches("total").unwrap();
+        let success: u16 = args
+            .get_one::<String>("Success")
+            .unwrap_or(&u16::MAX.to_string())
+            .parse()
+            .unwrap_or(u16::MAX);
+        let numtotal: Option<u16> = total_match
+            .get_one::<String>("Target Total")
+            .unwrap_or(&u16::MAX.to_string())
+            .parse()
+            .ok();
+        let dice_args = args
+            .get_many::<String>("Dice")
+            .unwrap_or_else(|| {
+                show_dice_warning();
+                clap::parser::ValuesRef::default()
+            })
+            .cloned()
+            .collect();
+
+        Self {
+            success,
+            print_bullshit: false,
+            show_total: true,
+            show_hits: false,
+            show_summary: true,
+            no_shitty_crits: false,
+            numhits: None,
+            numtotal,
+            dice_args,
+        }
+    }
+}
+
+impl From<&ArgMatches> for SimArgs {
+    fn from(matches: &ArgMatches) -> Self {
+        let sim_match = matches.subcommand_matches("sim").unwrap();
+        let success: u16 = matches
+            .get_one::<String>("Success")
+            .unwrap_or(&u16::MAX.to_string())
+            .parse()
+            .unwrap_or(u16::MAX);
+        let numhits: Option<u16> = sim_match
+            .get_one::<String>("Hits")
+            .unwrap_or(&u16::MAX.to_string())
+            .parse()
+            .ok();
+        let numtotal: Option<u16> = sim_match
+            .get_one::<String>("Total")
+            .unwrap_or(&u16::MAX.to_string())
+            .parse()
+            .ok();
+        let dice_args = matches
+            .get_many::<String>("Dice")
+            .unwrap_or_else(|| {
+                show_dice_warning();
+                clap::parser::ValuesRef::default()
+            })
+            .cloned()
+            .collect();
+
+        Self {
+            success,
+            print_bullshit: !sim_match.get_flag("NoBS"),
+            show_total: sim_match.get_flag("Show Totals"),
+            show_hits: sim_match.get_flag("Show Hits"),
+            show_summary: !sim_match.get_flag("Hide Summary"),
+            no_shitty_crits: matches.get_flag("NSC"),
+            numhits,
+            numtotal,
+            dice_args,
+        }
+    }
+}
+
+fn run_sim(matches: SimArgs) {
+    if matches.print_bullshit {
         flair::print_silly_shit();
     }
-    for dice in dice_args {
+    for dice in matches.dice_args {
         if dice.trim().is_empty() {
             show_dice_warning();
             continue;
         }
 
-        let d = DiceGroup::from(dice, 0, success, matches.get_flag("NSC")).unwrap_or_default();
-        if sim_match.get_flag("Show Totals") {
-            plot_dice_totals(&d, numtotal);
+        let d =
+            DiceGroup::from(&dice, 0, matches.success, matches.no_shitty_crits).unwrap_or_default();
+        if matches.show_total {
+            plot_dice_totals(&d, matches.numtotal);
         }
-        if sim_match.get_flag("Show Hits") {
-            plot_dice_hits(&d, numhits);
+        if matches.show_hits {
+            plot_dice_hits(&d, matches.numhits);
         }
-        if !sim_match.get_flag("Hide Summary") {
-            show_summary(&d, numhits, numtotal);
+        if matches.show_summary {
+            show_summary(&d, matches.numhits, matches.numtotal);
         }
     }
 }
@@ -255,6 +362,16 @@ fn get_matches() -> ArgMatches {
         ).subcommand(
             Command::new("help-dice")
                 .about("Show more information on dice syntax and behavior.")
+        ).subcommand(
+            Command::new("hits")
+                .about(format!("Simulate and predict probabilities of possible outcomes for success hits. This is an alias for {}.", "sim -bpn [TARGET HITS]".dark_cyan()))
+                .arg(
+                    Arg::new("Target Hits").action(ArgAction::Set))
+        ).subcommand(
+            Command::new("total")
+                .about(format!("Simulate and predict probabilities of possible outcomes for success totals. This is an alias for {}.", "sim -bts [TARGET TOTAL]".dark_cyan()))
+                .arg(
+                    Arg::new("Target Total").action(ArgAction::Set))
         ).subcommand(
             Command::new("sim")
                 .about("Simulate and predict probabilities of possible outcomes.")
